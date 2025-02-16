@@ -256,7 +256,8 @@ def generateCamerasFromTransforms(path, template_transformsfile, extension, maxt
                             image_path=None, image_name=None, width=image.shape[1], height=image.shape[2],
                             time = time, mask=None))
     return cam_infos
-def readCamerasFromTransforms(path, transformsfile, white_background, extension=".png", mapper = {}):
+
+def readCamerasFromTransforms(path, transformsfile, white_background, extension, mapper, resolution):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -268,7 +269,10 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
         frames = contents["frames"]
         for idx, frame in enumerate(frames):
             cam_name = os.path.join(path, frame["file_path"] + extension)
-            time = mapper[frame["time"]]
+            if mapper is None:
+                time = 0.0
+            else:
+                time = mapper[frame["time"]]
             matrix = np.linalg.inv(np.array(frame["transform_matrix"]))
             R = -np.transpose(matrix[:3,:3])
             R[:,0] = -R[:,0]
@@ -285,7 +289,7 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
             norm_data = im_data / 255.0
             arr = norm_data[:,:,:3] * norm_data[:, :, 3:4] + bg * (1 - norm_data[:, :, 3:4])
             image = Image.fromarray(np.array(arr*255.0, dtype=np.byte), "RGB")
-            image = PILtoTorch(image,(800,800))
+            image = PILtoTorch(image, resolution)
             fovy = focal2fov(fov2focal(fovx, image.shape[1]), image.shape[2])
             FovY = fovy 
             FovX = fovx
@@ -295,6 +299,7 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
                             time = time, mask=None))
             
     return cam_infos
+
 def read_timeline(path):
     with open(os.path.join(path, "transforms_train.json")) as json_file:
         train_json = json.load(json_file)
@@ -310,12 +315,13 @@ def read_timeline(path):
         timestamp_mapper[time] = time/max_time_float
 
     return timestamp_mapper, max_time_float
-def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
+
+def readNerfSyntheticInfo(path, white_background, eval, extension=".png", resolution= (800,800)):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
-    train_cam_infos = readCamerasFromTransforms(path, "transforms_train.json", white_background, extension, timestamp_mapper)
+    train_cam_infos = readCamerasFromTransforms(path, "transforms_train.json", white_background, extension, timestamp_mapper, resolution=resolution)
     print("Reading Test Transforms")
-    test_cam_infos = readCamerasFromTransforms(path, "transforms_test.json", white_background, extension, timestamp_mapper)
+    test_cam_infos = readCamerasFromTransforms(path, "transforms_test.json", white_background, extension, timestamp_mapper, resolution=resolution)
     print("Generating Video Transforms")
     video_cam_infos = generateCamerasFromTransforms(path, "transforms_train.json", extension, max_time)
     if not eval:
@@ -350,6 +356,90 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            maxtime=max_time
                            )
     return scene_info
+
+def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
+    timestamp_mapper, max_time = None, 1.0
+    print("Reading Training Transforms")
+    train_cam_infos = readCamerasFromTransforms(path, "camera_info.json", white_background, extension, mapper=None, resolution=None)
+    print("Reading Test Transforms")
+    test_cam_infos = train_cam_infos # TODO
+    print("Generating Video Transforms")
+    video_cam_infos = generateCamerasFromTransforms(path, "camera_info.json", extension, max_time) # TODO: max_time
+
+    nerf_normalization = getNerfppNorm(train_cam_infos)
+
+    if init_with_traj: # Traj's first frame
+        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        if not os.path.exists(ply_path):
+            with open(os.path.join(path, "particles.json")) as json_file:
+                trajs = json.load(json_file)
+            xyz = np.stack([traj['position'] for traj in trajs], 0)
+            num_pts = xyz.shape[0]
+            shs = np.random.random((num_pts, 3)) / 255.0
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+            storePly(ply_path, xyz, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+
+    else: # COLMAP init
+        ply_path = os.path.join(path, "fused.ply")
+        if not os.path.exists(ply_path):        
+            # TODO: xyz from colmap, others random/zero
+            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+            
+    scene_info = SceneInfo(point_cloud=pcd,
+                           train_cameras=train_cam_infos,
+                           test_cameras=test_cam_infos,
+                           video_cameras=video_cam_infos,
+                           nerf_normalization=nerf_normalization,
+                           ply_path=ply_path,
+                           maxtime=max_time)
+    return scene_info
+
+def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
+    timestamp_mapper, max_time = None, 1.0 # TODO: change to read_timeline(path)
+    print("Reading Training Transforms")
+    train_cam_infos = readCamerasFromTransforms(path, "dynamic_camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    test_cam_infos = video_cam_infos = train_cam_infos # TODO: change
+    #print("Reading Test Transforms")
+    #test_cam_infos = readCamerasFromTransforms(path, "dynamic_camera_info_test.json", white_background, extension, mapper=None, resolution=None)
+    #print("Generating Video Transforms") #TODO: change
+    #video_cam_infos = generateCamerasFromTransforms(path, "dynamic_camera_info_train.json", extension, max_time)
+
+    nerf_normalization = getNerfppNorm(train_cam_infos)
+
+    if init_with_traj: # Traj's first frame
+        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        if not os.path.exists(ply_path):
+            with open(os.path.join(path, "dynamic_trajectories", "particles_frame_0001.json")) as json_file:
+                trajs = json.load(json_file)
+            xyz = np.stack([traj['xyz'] for traj in trajs], 0)
+            num_pts = xyz.shape[0]
+            shs = np.random.random((num_pts, 3)) / 255.0
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+            storePly(ply_path, xyz, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+
+    else: # COLMAP init
+        ply_path = os.path.join(path, "fused.ply")
+        if not os.path.exists(ply_path):        
+            # TODO: xyz from colmap, others random/zero
+            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+            
+    scene_info = SceneInfo(point_cloud=pcd,
+                           train_cameras=train_cam_infos,
+                           test_cameras=test_cam_infos,
+                           video_cameras=video_cam_infos,
+                           nerf_normalization=nerf_normalization,
+                           ply_path=ply_path,
+                           maxtime=max_time)
+    return scene_info
+
 def format_infos(dataset,split):
     # loading
     cameras = []
@@ -638,5 +728,7 @@ sceneLoadTypeCallbacks = {
     "dynerf" : readdynerfInfo,
     "nerfies": readHyperDataInfos,  # NeRFies & HyperNeRF dataset proposed by [https://github.com/google/hypernerf/releases/tag/v0.1]
     "PanopticSports" : readPanopticSportsinfos,
-    "MultipleView": readMultipleViewinfos
+    "MultipleView": readMultipleViewinfos,
+    "StaticPhysTrack" : readStaticPhysTrackInfo,
+    "PhysTrack" : readPhysTrackInfo
 }

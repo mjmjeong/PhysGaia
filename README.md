@@ -1,5 +1,16 @@
 # 4D Gaussian Splatting for Real-Time Dynamic Scene Rendering
 
+
+## PhysTrack: Debug
+
+For debugging , run
+
+```
+python train.py -s /131_data/datasets/PhysTrack/example_dataset/static --port 6018 --expname "outputs/debug" --configs arguments/phystrack/debug.py
+python train.py -s /131_data/datasets/PhysTrack/example_dataset/dynamic_v2 --port 6018 --expname "outputs/debug" --configs arguments/phystrack/debug.py
+```
+
+
 ## CVPR 2024
 
 ### [Project Page](https://guanjunwu.github.io/4dgs/index.html)| [arXiv Paper](https://arxiv.org/abs/2310.08528)

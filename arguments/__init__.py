@@ -57,6 +57,7 @@ class ModelParams(ParamGroup):
         self.render_process=False
         self.add_points=False
         self.extension=".png"
+        self.init_with_traj=False
         self.llffhold=8
         super().__init__(parser, "Loading Parameters", sentinel)
 
