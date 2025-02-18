@@ -446,7 +446,7 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
 def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
     timestamp_mapper, max_time = None, 1.0 # TODO: change to read_timeline(path)
     print("Reading Training Transforms")
-    train_cam_infos = readCamerasFromTransforms(path, "dynamic_camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    train_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
     test_cam_infos = video_cam_infos = train_cam_infos # TODO: change
     #print("Reading Test Transforms")
     #test_cam_infos = readCamerasFromTransforms(path, "dynamic_camera_info_test.json", white_background, extension, mapper=None, resolution=None)
