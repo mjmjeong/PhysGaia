@@ -204,8 +204,8 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
         psnr_ = psnr(image_tensor, gt_image_tensor).mean().double()
         # norm
         
-        torchvision.utils.save_image(image_tensor + gt_image_tensor * 0.5, 'test.png')
-        breakpoint()
+        #torchvision.utils.save_image(image_tensor + gt_image_tensor * 0.5, 'test.png')
+        #breakpoint()
         loss = Ll1
         if stage == "fine" and hyper.time_smoothness_weight != 0:
             # tv_loss = 0

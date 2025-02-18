@@ -300,6 +300,51 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension,
             
     return cam_infos
 
+def readCustomCamerasFromTransforms(path, transformsfile, white_background, extension, mapper, resolution):
+    cam_infos = []
+
+    with open(os.path.join(path, transformsfile)) as json_file:
+        contents = json.load(json_file)
+        try:
+            fovx = contents["camera_angle_x"]
+        except:
+            fovx = focal2fov(contents['fl_x'],contents['w'])
+        frames = contents["frames"]
+        for idx, frame in enumerate(frames):
+            cam_name = os.path.join(path, frame["file_path"] + extension)
+            if mapper is None:
+                time = 0.0
+            else:
+                time = mapper[frame["time"]]
+
+            image_path = os.path.join(path, cam_name)
+            image_name = Path(cam_name).stem
+            image = Image.open(image_path)
+
+            im_data = np.array(image.convert("RGBA"))
+
+            bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
+
+            norm_data = im_data / 255.0
+            arr = norm_data[:,:,:3] * norm_data[:, :, 3:4] + bg * (1 - norm_data[:, :, 3:4])
+            image = Image.fromarray(np.array(arr*255.0, dtype=np.byte), "RGB")
+            image = PILtoTorch(image, resolution)
+            fovy = focal2fov(fov2focal(fovx, image.shape[1]), image.shape[2])
+            FovY = fovy 
+            FovX = fovx
+            
+            pose = np.array(frame["transform_matrix"])
+            R = pose[:3,:3]
+            R = - R
+            R[:,0] = -R[:,0]
+            T = -pose[:3,3].dot(R)
+
+            cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=FovX, FovX=FovY, image=image,
+                            image_path=image_path, image_name=image_name, width=image.shape[1], height=image.shape[2],
+                            time = time, mask=None))
+            
+    return cam_infos
+
 def read_timeline(path):
     with open(os.path.join(path, "transforms_train.json")) as json_file:
         train_json = json.load(json_file)
@@ -357,10 +402,10 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png", resolu
                            )
     return scene_info
 
-def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
+def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False):
     timestamp_mapper, max_time = None, 1.0
     print("Reading Training Transforms")
-    train_cam_infos = readCamerasFromTransforms(path, "camera_info.json", white_background, extension, mapper=None, resolution=None)
+    train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info.json", white_background, extension, mapper=None, resolution=None)
     print("Reading Test Transforms")
     test_cam_infos = train_cam_infos # TODO
     print("Generating Video Transforms")
