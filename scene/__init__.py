@@ -42,7 +42,15 @@ class Scene:
         self.train_cameras = {}
         self.test_cameras = {}
 
-        if os.path.exists(os.path.join(args.source_path, "sparse")):
+        if os.path.exists(os.path.join(args.source_path, "particles.json")):
+            print("Found particles.json file, assuming Static PhysTrack data set!")
+            scene_info = sceneLoadTypeCallbacks["StaticPhysTrack"](
+                args.source_path, args.white_background, args.eval, init_with_traj=args.init_with_traj)
+        elif os.path.exists(os.path.join(args.source_path, "dynamic_trajectories")):
+            print("Found dynamic_trajectories directory, assuming PhysTrack data set!")
+            scene_info = sceneLoadTypeCallbacks["PhysTrack"](
+                args.source_path, args.white_background, args.eval, init_with_traj=args.init_with_traj)
+        elif os.path.exists(os.path.join(args.source_path, "sparse")):
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")

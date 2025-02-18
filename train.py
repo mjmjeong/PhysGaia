@@ -22,6 +22,8 @@ from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser, Namespace
 from arguments import ModelParams, PipelineParams, OptimizationParams
+import numpy as np
+from PIL import Image
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -42,6 +44,23 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations):
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+
+    """
+    # render at iteration=0
+    alpha = 0.5
+
+    dir_path = os.path.join(os.path.dirname(args.source_path), "temp")
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    cameras = scene.getTrainCameras()
+    for camera in tqdm(cameras):
+        source_image = camera.original_image.permute(1, 2, 0).cpu().numpy()
+        gaussian_image = render(camera, gaussians, pipe, background, 0, 0, 0)["render"].detach()
+        gaussian_image = gaussian_image.permute(1, 2, 0).cpu().numpy()
+        blended_image = alpha * source_image + (1 - alpha) * gaussian_image
+        blended_image = np.clip(blended_image * 255, 0, 255).astype(np.uint8)
+        Image.fromarray(blended_image).save(os.path.join(dir_path, camera.image_name + ".jpg"))
+    """
 
     iter_start = torch.cuda.Event(enable_timing=True)
     iter_end = torch.cuda.Event(enable_timing=True)

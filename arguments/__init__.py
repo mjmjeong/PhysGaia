@@ -58,6 +58,7 @@ class ModelParams(ParamGroup):
         self.data_device = "cuda"
         self.eval = False
         self.load2gpu_on_the_fly = False
+        self.init_with_traj=False
         self.is_blender = False
         self.is_6dof = False
         super().__init__(parser, "Loading Parameters", sentinel)
