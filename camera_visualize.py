@@ -143,7 +143,7 @@ def main(args):
     if args.view_mode in ["path", "both"]:
         if camera_path_train is not None:
             geometries.append(camera_path_train)
-        if camera_path_test is not None and args.dataset == "hypernerf":
+        if camera_path_test is not None:
             geometries.append(camera_path_test)
     
     # If save_dir is provided, remove existing directory and create a new one, then save outputs.
@@ -164,7 +164,7 @@ def main(args):
             if camera_path_train is not None:
                 train_path_file = os.path.join(args.save_dir, "camera_path_train.ply")
                 o3d.io.write_line_set(train_path_file, camera_path_train)
-            if camera_path_test is not None:
+            if camera_path_test is not None  and args.dataset == "hypernerf":
                 test_path_file = os.path.join(args.save_dir, "camera_path_test.ply")
                 o3d.io.write_line_set(test_path_file, camera_path_test)
     else:
