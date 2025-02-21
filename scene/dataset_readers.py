@@ -414,7 +414,7 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
     print("Reading Test Transforms")
     test_cam_infos = train_cam_infos # TODO
     print("Generating Video Transforms")
-    video_cam_infos = generateCamerasFromTransforms(path, "camera_info.json", extension, max_time, rot_axis="y") # TODO: max_time
+    video_cam_infos = generateCamerasFromTransforms(path, "camera_info.json", extension, max_time, rot_axis="y")
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
