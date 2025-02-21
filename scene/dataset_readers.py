@@ -197,7 +197,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
                            nerf_normalization=nerf_normalization,
                            ply_path=ply_path)
     return scene_info
-def generateCamerasFromTransforms(path, template_transformsfile, extension, maxtime):
+def generateCamerasFromTransforms(path, template_transformsfile, extension, maxtime, rot_axis="z"):
     trans_t = lambda t : torch.Tensor([
     [1,0,0,0],
     [0,1,0,0],
@@ -219,7 +219,12 @@ def generateCamerasFromTransforms(path, template_transformsfile, extension, maxt
         c2w = trans_t(radius)
         c2w = rot_phi(phi/180.*np.pi) @ c2w
         c2w = rot_theta(theta/180.*np.pi) @ c2w
-        c2w = torch.Tensor(np.array([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]])) @ c2w
+        if rot_axis == "z":
+            c2w = torch.Tensor(np.array([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]])) @ c2w
+        elif rot_axis == "y":
+            c2w = torch.Tensor(np.array([[-1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])) @ c2w
+        else:
+            c2w = torch.Tensor(np.array([[0,0,1,0],[0,1,0,0],[-1,0,0,0],[0,0,0,1]])) @ c2w
         return c2w
     cam_infos = []
     # generate render poses and times
@@ -346,9 +351,9 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
     return cam_infos
 
 def read_timeline(path):
-    with open(os.path.join(path, "transforms_train.json")) as json_file:
+    with open(os.path.join(path, "dynamic_camera_info_train.json")) as json_file:
         train_json = json.load(json_file)
-    with open(os.path.join(path, "transforms_test.json")) as json_file:
+    with open(os.path.join(path, "dynamic_camera_info_test.json")) as json_file:
         test_json = json.load(json_file)  
     time_line = [frame["time"] for frame in train_json["frames"]] + [frame["time"] for frame in test_json["frames"]]
     time_line = set(time_line)
@@ -409,7 +414,7 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
     print("Reading Test Transforms")
     test_cam_infos = train_cam_infos # TODO
     print("Generating Video Transforms")
-    video_cam_infos = generateCamerasFromTransforms(path, "camera_info.json", extension, max_time) # TODO: max_time
+    video_cam_infos = generateCamerasFromTransforms(path, "camera_info.json", extension, max_time, rot_axis="y") # TODO: max_time
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
@@ -444,14 +449,13 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
     return scene_info
 
 def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
-    timestamp_mapper, max_time = None, 1.0 # TODO: change to read_timeline(path)
+    timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
     train_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
-    test_cam_infos = video_cam_infos = train_cam_infos # TODO: change
-    #print("Reading Test Transforms")
-    #test_cam_infos = readCamerasFromTransforms(path, "dynamic_camera_info_test.json", white_background, extension, mapper=None, resolution=None)
-    #print("Generating Video Transforms") #TODO: change
-    #video_cam_infos = generateCamerasFromTransforms(path, "dynamic_camera_info_train.json", extension, max_time)
+    print("Reading Test Transforms")
+    test_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_test.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    print("Generating Video Transforms")
+    video_cam_infos = generateCamerasFromTransforms(path, "dynamic_camera_info_train.json", extension, max_time, rot_axis="y")
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
