@@ -27,7 +27,7 @@ for folder in "$DATA_DIR/hypernerf"/*/; do
             rm -rf "$OUTPUT_DIR"
         fi
         mkdir -p "$OUTPUT_DIR"
-        python hypernerf_visualize.py --path "$folder" --view_mode "$VIEW_MODE" --num_cameras "$NUM_CAMERAS" --save_dir "$OUTPUT_DIR"
+        python camera_visualize.py --path "$folder" --view_mode "$VIEW_MODE" --num_cameras "$NUM_CAMERAS" --save_dir "$OUTPUT_DIR" --dataset "hypernerf"
     fi
 done
 
@@ -41,7 +41,7 @@ for folder in "$DATA_DIR/iphone"/*/; do
             rm -rf "$OUTPUT_DIR"
         fi
         mkdir -p "$OUTPUT_DIR"
-        python dycheck_visualize.py --path "$folder" --view_mode "$VIEW_MODE" --num_cameras "$NUM_CAMERAS" --save_dir "$OUTPUT_DIR"
+        python camera_visualize.py --path "$folder" --view_mode "$VIEW_MODE" --num_cameras "$NUM_CAMERAS" --save_dir "$OUTPUT_DIR" --dataset "dycheck"
     fi
 done
 
