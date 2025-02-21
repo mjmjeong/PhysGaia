@@ -20,8 +20,8 @@ for folder in "$DATA_DIR/hypernerf"/*/; do
         # Create a subdirectory for the current folder's output
         OUTPUT_DIR="${RESULT_DIR}/${folder_name}_hypernerf"
         mkdir -p "$OUTPUT_DIR"
-        # Run hypernerf_visualize.py and save the geometries into the OUTPUT_DIR
-        python hypernerf_visualize.py --path "$folder" --view_mode both --num_cameras 10 --save_dir "$OUTPUT_DIR"
+        # Run camera_visualize.py and save the geometries into the OUTPUT_DIR
+        python camera_visualize.py --path "$folder" --view_mode both --num_cameras 10 --save_dir "$OUTPUT_DIR"
     fi
 done
 
@@ -32,7 +32,7 @@ for folder in "$DATA_DIR/iphone"/*/; do
         folder_name=$(basename "$folder")
         OUTPUT_DIR="${RESULT_DIR}/${folder_name}_iphone"
         mkdir -p "$OUTPUT_DIR"
-        python hypernerf_visualize.py --path "$folder" --view_mode both --num_cameras 10 --save_dir "$OUTPUT_DIR"
+        python camera_visualize.py --path "$folder" --view_mode both --num_cameras 10 --save_dir "$OUTPUT_DIR"
     fi
 done
 
