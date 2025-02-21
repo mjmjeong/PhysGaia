@@ -1,14 +1,19 @@
 #!/bin/bash
 
-# Check if the data directory is provided as an argument
+# Usage: ./run.sh <data_directory> [view_mode] [num_cameras]
+#   data_directory : the base directory containing hypernerf and iphone folders
+#   view_mode      : visualization mode: "both", "frustums", or "path" (default: both)
+#   num_cameras    : number of cameras to sample (default: 10)
+
 if [ -z "$1" ]; then
-    echo "Usage: $0 <data_directory>"
+    echo "Usage: $0 <data_directory> [view_mode] [num_cameras]"
     exit 1
 fi
 
 DATA_DIR="$1"
+VIEW_MODE=${2:-both}
+NUM_CAMERAS=${3:-10}
 
-# Create a directory to store all results
 RESULT_DIR="results"
 mkdir -p "$RESULT_DIR"
 
@@ -17,11 +22,12 @@ for folder in "$DATA_DIR/hypernerf"/*/; do
     if [ -d "$folder" ]; then
         echo "Processing hypernerf folder: $folder"
         folder_name=$(basename "$folder")
-        # Create a subdirectory for the current folder's output
-        OUTPUT_DIR="${RESULT_DIR}/${folder_name}_hypernerf"
+        OUTPUT_DIR="${RESULT_DIR}/hypernerf/${folder_name}"
+        if [ -d "$OUTPUT_DIR" ]; then
+            rm -rf "$OUTPUT_DIR"
+        fi
         mkdir -p "$OUTPUT_DIR"
-        # Run camera_visualize.py and save the geometries into the OUTPUT_DIR
-        python camera_visualize.py --path "$folder" --view_mode both --num_cameras 10 --save_dir "$OUTPUT_DIR"
+        python camera_visualize.py --path "$folder" --view_mode "$VIEW_MODE" --num_cameras "$NUM_CAMERAS" --save_dir "$OUTPUT_DIR"
     fi
 done
 
@@ -30,9 +36,12 @@ for folder in "$DATA_DIR/iphone"/*/; do
     if [ -d "$folder" ]; then
         echo "Processing iphone folder: $folder"
         folder_name=$(basename "$folder")
-        OUTPUT_DIR="${RESULT_DIR}/${folder_name}_iphone"
+        OUTPUT_DIR="${RESULT_DIR}/iphone/${folder_name}"
+        if [ -d "$OUTPUT_DIR" ]; then
+            rm -rf "$OUTPUT_DIR"
+        fi
         mkdir -p "$OUTPUT_DIR"
-        python camera_visualize.py --path "$folder" --view_mode both --num_cameras 10 --save_dir "$OUTPUT_DIR"
+        python camera_visualize.py --path "$folder" --view_mode "$VIEW_MODE" --num_cameras "$NUM_CAMERAS" --save_dir "$OUTPUT_DIR"
     fi
 done
 

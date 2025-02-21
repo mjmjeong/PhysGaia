@@ -11,16 +11,19 @@ def load_geometries(load_dir):
     if os.path.exists(pcd_path):
         pcd = o3d.io.read_point_cloud(pcd_path)
         geometries.append(pcd)
+    
     # Load frustum files (assumed to be saved as frustum_*.ply)
     frustum_files = sorted(glob.glob(os.path.join(load_dir, "frustum_*.ply")))
     for f in frustum_files:
         frustum = o3d.io.read_line_set(f)
         geometries.append(frustum)
-    # Load camera path if exists
-    path_file = os.path.join(load_dir, "camera_path.ply")
-    if os.path.exists(path_file):
-        camera_path = o3d.io.read_line_set(path_file)
+    
+    # Load camera path files (now saved as camera_path_*.ply)
+    camera_path_files = sorted(glob.glob(os.path.join(load_dir, "camera_path_*.ply")))
+    for f in camera_path_files:
+        camera_path = o3d.io.read_line_set(f)
         geometries.append(camera_path)
+    
     return geometries
 
 def main(args):
