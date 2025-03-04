@@ -45,8 +45,29 @@ class Scene:
         self.test_cameras = {}
         raydict = {}
 
+        if args.model == 'ours_lite':
+            keep_rayinfo=False
+        else:
+            keep_rayinfo=True
 
-        if loader == "colmap" or loader == "colmapvalid": # colmapvalid only for testing
+        if os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
+            print("Found transforms_train.json file, assuming Blender data set!")
+            scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval, args)
+            dataset_type="blender"
+        
+        elif os.path.exists(os.path.join(args.source_path, "particles.json")):
+            print("Found particles.json file, assuming Static PhysTrack data set!")
+            scene_info = sceneLoadTypeCallbacks["StaticPhysTrack"](args.source_path, args.white_background, args.eval, 
+                                                                    init_with_traj=args.init_with_traj, keep_rayinfo=keep_rayinfo)
+            dataset_type="staticphystrack"
+
+        elif os.path.exists(os.path.join(args.source_path, "dynamic_camera_info_train.json")):
+            print("Found dynamic_camera_info.json file, assuming PhysTrack data set!")
+            scene_info = sceneLoadTypeCallbacks["PhysTrack"](args.source_path, args.white_background, args.eval, 
+                                                            init_with_traj=args.init_with_traj, keep_rayinfo=keep_rayinfo)
+            dataset_type="phystrack"
+
+        elif loader == "colmap" or loader == "colmapvalid": # colmapvalid only for testing
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, multiview, duration=duration)
         
         elif loader == "technicolor" or loader == "technicolorvalid" :
@@ -54,11 +75,13 @@ class Scene:
         
         elif loader == "immersive" or loader == "immersivevalid" or loader == "immersivess"  :
             scene_info = sceneLoadTypeCallbacks["Immersive"](args.source_path, args.images, args.eval, multiview, duration=duration)
+        
         elif loader == "immersivevalidss":
             scene_info = sceneLoadTypeCallbacks["Immersive"](args.source_path, args.images, args.eval, multiview, duration=duration, testonly=True)
 
         elif loader == "colmapmv" : # colmapvalid only for testing
             scene_info = sceneLoadTypeCallbacks["Colmapmv"](args.source_path, args.images, args.eval, multiview, duration=duration)
+        
         else:
             assert False, "Could not recognize scene type!"
 
@@ -89,41 +112,33 @@ class Scene:
             print("Loading Training Cameras")  
             if loader in ["colmapvalid", "colmapmv", "immersivevalid","technicolorvalid", "immersivevalidss", "imv2valid"]:         
                 self.train_cameras[resolution_scale] = [] # no training data
-
-
             elif loader in ["immersivess"]:
                 assert resolution_scale == 1.0, "High frequency data only available at 1.0 scale"
                 self.train_cameras[resolution_scale] = cameraList_from_camInfosv2(scene_info.train_cameras, resolution_scale, args, ss=True)
-
             else: # immersive and immersivevalid 
                 self.train_cameras[resolution_scale] = cameraList_from_camInfosv2(scene_info.train_cameras, resolution_scale, args)
             
-            
-            
             print("Loading Test Cameras")
-            if loader  in ["colmapvalid", "immersivevalid", "colmap", "technicolorvalid", "technicolor", "imv2","imv2valid"]: # we need gt for metrics
+            if loader  in ["blender", "staticphystrack", "phystrack", "colmapvalid", "immersivevalid", "colmap", "technicolorvalid", "technicolor", "imv2","imv2valid"]: # we need gt for metrics
                 self.test_cameras[resolution_scale] = cameraList_from_camInfosv2(scene_info.test_cameras, resolution_scale, args)
             elif loader in ["immersivess", "immersivevalidss"]:
                 self.test_cameras[resolution_scale] = cameraList_from_camInfosv2(scene_info.test_cameras, resolution_scale, args, ss=True)
             elif loader in ["colmapmv"]:                 # only for multi view
-
                 self.test_cameras[resolution_scale] = cameraList_from_camInfosv2nogt(scene_info.test_cameras, resolution_scale, args)
 
+        if keep_rayinfo:
+            for cam in self.train_cameras[resolution_scale]:
+                if cam.image_name not in raydict and cam.rayo is not None:
+                    raydict[cam.image_name] = torch.cat([cam.rayo, cam.rayd], dim=1).cuda() # 1 x 6 x H x W        
+            for cam in self.test_cameras[resolution_scale]:
+                if cam.image_name not in raydict and cam.rayo is not None:
+                    raydict[cam.image_name] = torch.cat([cam.rayo, cam.rayd], dim=1).cuda() # 1 x 6 x H x W
 
-        for cam in self.train_cameras[resolution_scale]:
-            if cam.image_name not in raydict and cam.rayo is not None:
-                # rays_o, rays_d = 1, cameradirect
-                
-                raydict[cam.image_name] = torch.cat([cam.rayo, cam.rayd], dim=1).cuda() # 1 x 6 x H x W
-        for cam in self.test_cameras[resolution_scale]:
-            if cam.image_name not in raydict and cam.rayo is not None:
-                raydict[cam.image_name] = torch.cat([cam.rayo, cam.rayd], dim=1).cuda() # 1 x 6 x H x W
+            for cam in self.train_cameras[resolution_scale]:
+                cam.rays = raydict[cam.image_name] # should be direct ?
 
-        for cam in self.train_cameras[resolution_scale]:
-            cam.rays = raydict[cam.image_name] # should be direct ?
-
-        for cam in self.test_cameras[resolution_scale]:
-            cam.rays = raydict[cam.image_name] # should be direct ?
+            for cam in self.test_cameras[resolution_scale]:
+                cam.rays = raydict[cam.image_name] # should be direct ?
 
         if loader in ["immersivess", "immersivevalidss"]:# construct shared fisheyd remapping
             self.fisheyemapper = {}

@@ -141,11 +141,16 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, near, far, 
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
 
-        if intr.model=="SIMPLE_PINHOLE":
+        if intr.model in ["SIMPLE_PINHOLE", "SIMPLE_RADIAL"]:
             focal_length_x = intr.params[0]
             FovY = focal2fov(focal_length_x, height)
             FovX = focal2fov(focal_length_x, width)
         elif intr.model=="PINHOLE":
+            focal_length_x = intr.params[0]
+            focal_length_y = intr.params[1]
+            FovY = focal2fov(focal_length_y, height)
+            FovX = focal2fov(focal_length_x, width)
+        elif intr.model == "OPENCV":
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1]
             FovY = focal2fov(focal_length_y, height)
@@ -1001,13 +1006,11 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png", multiv
         # We create random points inside the bounds of the synthetic Blender scenes
         xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3
         shs = np.random.random((num_pts, 3)) / 255.0
-        pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
-
-        storePly(ply_path, xyz, SH2RGB(shs) * 255)
-    try:
+        pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)), times=np.zeros((num_pts, 1)))
+        xyzt = np.concatenate((xyz, np.zeros((num_pts, 1))), axis=1)
+        storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+    else:
         pcd = fetchPly(ply_path)
-    except:
-        pcd = None
 
     scene_info = SceneInfo(point_cloud=pcd,
                            train_cameras=train_cam_infos,
@@ -1016,13 +1019,152 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png", multiv
                            ply_path=ply_path)
     return scene_info
 
+    
+
+def read_timeline(path, train_file="dynamic_camera_info_train.json", test_file="dynamic_camera_info_test.json"):
+    with open(os.path.join(path, train_file)) as json_file:
+        train_json = json.load(json_file)
+    with open(os.path.join(path, test_file)) as json_file:
+        test_json = json.load(json_file)  
+    time_line = [frame["time"] for frame in train_json["frames"]] + [frame["time"] for frame in test_json["frames"]]
+    time_line = set(time_line)
+    time_line = list(time_line)
+    time_line.sort()
+    timestamp_mapper = {}
+    max_time_float = max(time_line)
+    for index, time in enumerate(time_line):
+        timestamp_mapper[time] = time/max_time_float
+
+    return timestamp_mapper, max_time_float
 
 
+def readCustomCamerasFromTransforms(path, transformsfile, white_background, extension=".png", mapper=None, keep_rayinfo=True):
+    cam_infos = []
+    with open(os.path.join(path, transformsfile)) as json_file:
+        contents = json.load(json_file)
+        fovx = contents["camera_angle_x"]
+
+        frames = contents["frames"]
+        for idx, frame in enumerate(frames):
+            cam_name = os.path.join(path, frame["file_path"] + extension)
+            if mapper is None:
+                time = 0.0
+            else:
+                time = mapper[frame["time"]]
+
+            # camera pose
+            pose = np.array(frame["transform_matrix"])
+            R = pose[:3,:3]
+            R = - R
+            R[:,0] = -R[:,0]
+            T = -pose[:3,3].dot(R)
+
+            # image
+            image_path = os.path.join(path, cam_name)
+            image_name = Path(cam_name).stem
+            image = Image.open(image_path)
+
+            im_data = np.array(image.convert("RGBA"))
+
+            bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
+
+            norm_data = im_data / 255.0
+            arr = norm_data[:,:,:3] * norm_data[:, :, 3:4] + bg * (1 - norm_data[:, :, 3:4])
+            image = Image.fromarray(np.array(arr*255.0, dtype=np.byte), "RGB")
+
+            fovy = focal2fov(fov2focal(fovx, image.size[0]), image.size[1])
+            FovY = fovy 
+            FovX = fovx
+
+            width = image.size[0]
+            height = image.size[1]
+            cxr = cyr = 0
+            near = 0.1
+            far = 100
+            if keep_rayinfo:
+                cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=FovY, FovX=FovX, image=image, 
+                                                image_path=image_path, image_name=image_name, width=width, height=height, 
+                                                near=near, far=far, timestamp=time, pose=1, hpdirecitons=1, cxr=cxr, cyr=cyr))
+            else:
+                cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=FovY, FovX=FovX, image=image, 
+                                                image_path=image_path, image_name=image_name, width=width, height=height, 
+                                                near=near, far=far, timestamp=time, pose=None, hpdirecitons=None, cxr=cxr, cyr=cyr))
+    return cam_infos
 
 
+def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False, keep_rayinfo=True):
+    print("Reading Training Transforms")
+    train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info.json", white_background, extension, mapper=None, keep_rayinfo=keep_rayinfo)
+    test_cam_infos = train_cam_infos # TODO
 
+    nerf_normalization = getNerfppNorm(train_cam_infos)
 
+    if init_with_traj: # Traj's first frame
+        ply_path = os.path.join(path, "traj_0_spacetime.ply") # TODO: align with 4DGS
+        if not os.path.exists(ply_path):
+            with open(os.path.join(path, "particles.json")) as json_file:
+                trajs = json.load(json_file)
+            xyz = np.stack([traj['position'] for traj in trajs], 0)
+            num_pts = xyz.shape[0]
+            shs = np.random.random((num_pts, 3)) / 255.0
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)), times=np.zeros((num_pts, 1)))
+            xyzt = np.concatenate((xyz, np.zeros((num_pts, 1))), axis=1)
+            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
 
+    else: # COLMAP init
+        ply_path = os.path.join(path, "fused.ply")
+        if not os.path.exists(ply_path):        
+            # TODO: xyz from colmap, others random/zero
+            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+            
+    scene_info = SceneInfo(point_cloud=pcd,
+                           train_cameras=train_cam_infos,
+                           test_cameras=test_cam_infos,
+                           nerf_normalization=nerf_normalization,
+                           ply_path=ply_path)
+    return scene_info
+
+def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False, keep_rayinfo=True):
+    timestamp_mapper, max_time = read_timeline(path)
+    print("Reading Training Transforms")
+    train_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_train.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+    print("Reading Test Transforms")
+    test_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_test.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+
+    nerf_normalization = getNerfppNorm(train_cam_infos)
+
+    if init_with_traj: # Traj's first frame
+        ply_path = os.path.join(path, "traj_0.ply")
+        if not os.path.exists(ply_path):
+            with open(os.path.join(path, "dynamic_trajectories", "particles_frame_0001.json")) as json_file:
+                trajs = json.load(json_file)
+            xyz = np.stack([traj['xyz'] for traj in trajs], 0)
+            num_pts = xyz.shape[0]
+            shs = np.random.random((num_pts, 3)) / 255.0
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)), times=np.zeros((num_pts, 1)))
+            xyzt = np.concatenate((xyz, np.zeros((num_pts, 1))), axis=1)
+            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+
+    else: # COLMAP init
+        ply_path = os.path.join(path, "fused.ply")
+        if not os.path.exists(ply_path):        
+            # TODO: xyz from colmap, others random/zero
+            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+            
+    scene_info = SceneInfo(point_cloud=pcd,
+                           train_cameras=train_cam_infos,
+                           test_cameras=test_cam_infos,
+                           nerf_normalization=nerf_normalization,
+                           ply_path=ply_path)
+    return scene_info
 
 def readColmapCamerasImmersivev2Testonly(cam_extrinsics, cam_intrinsics, images_folder, near, far, startime=0, duration=50):
     cam_infos = []
@@ -1205,6 +1347,8 @@ sceneLoadTypeCallbacks = {
     "Colmapmv": readColmapSceneInfoMv,
     "Blender" : readNerfSyntheticInfo, 
     "Technicolor": readColmapSceneInfoTechnicolor,
+    "StaticPhysTrack" : readStaticPhysTrackInfo,
+    "PhysTrack" : readPhysTrackInfo
 }
 
 

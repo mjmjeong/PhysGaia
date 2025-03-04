@@ -64,11 +64,9 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
 
 
 
-
     rbfbasefunction = trbfunction
     scene = Scene(dataset, gaussians, duration=duration, loader=dataset.loader)
     
-
     currentxyz = gaussians._xyz 
     maxx, maxy, maxz = torch.amax(currentxyz[:,0]), torch.amax(currentxyz[:,1]), torch.amax(currentxyz[:,2])# z wrong...
     minx, miny, minz = torch.amin(currentxyz[:,0]), torch.amin(currentxyz[:,1]), torch.amin(currentxyz[:,2])
@@ -105,12 +103,18 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
     flagtwo = 0
     depthdict = {}
 
-    if opt.batch > 1:
+    if opt.batch >= 1:
         traincameralist = scene.getTrainCameras().copy()
         traincamdict = {}
-        for i in range(duration): # 0 to 4, -> (0.0, to 0.8)
-            traincamdict[i] = [cam for cam in traincameralist if cam.timestamp == i/duration]
+ #       train_cam_dict_name = {}
+        for i, cam_data in enumerate(traincameralist):
+            traincamdict[i] = [cam_data]
+#            train_cam_dict_name[cam_data.image_name] = cam_data
+        #[cam for cam in traincameralist] # TODO
+#        for i in range(duration): # 0 to 4, -> (0.0, to 0.8)
+#            traincamdict[i] = [cam for cam in traincameralist if cam.timestamp == i/duration]
     
+    testcameralist = scene.getTestCameras()
     
     if gaussians.ts is None :
         H,W = traincameralist[0].image_height, traincameralist[0].image_width
@@ -170,10 +174,9 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
 
         if opt.batch > 1:
             gaussians.zero_gradient_cache()
-            timeindex = randint(0, duration-1) # 0 to 49
-            viewpointset = traincamdict[timeindex]
-            camindex = random.sample(viewpointset, opt.batch)
-
+            # timeindex = randint(0, duration-1) # 0 to 49
+            # viewpointset = traincamdict[timeindex]
+            camindex = random.sample(traincameralist, opt.batch)
             for i in range(opt.batch):
                 viewpoint_cam = camindex[i]
                 render_pkg = render(viewpoint_cam, gaussians, pipe, background,  override_color=None,  basicfunction=rbfbasefunction, GRsetting=GRsetting, GRzer=GRzer)
@@ -398,7 +401,6 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
 
 if __name__ == "__main__":
     
-
     args, lp_extract, op_extract, pp_extract = getparser()
     setgtisint8(op_extract.gtisint8)
     train(lp_extract, op_extract, pp_extract, args.save_iterations, args.debug_from, densify=args.densify, duration=args.duration, rgbfunction=args.rgbfunction, rdpip=args.rdpip)
