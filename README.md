@@ -1,3 +1,11 @@
+# PhysTrack: example
+
+```
+#python train.py --eval --config configs/base_phystrack_lite.json --model_path log/debug --source_path /131_data/datasets/PhysTrack/example_dataset/dynamic_v2 --init_with_traj
+python train.py --eval --config configs/base_phystrack_full.json --model_path log/debug --source_path /131_data/datasets/PhysTrack/example_dataset/dynamic_v2 --init_with_traj
+```
+
+
 # Spacetime Gaussian Feature Splatting for Real-Time Dynamic View Synthesis
 
 ## CVPR 2024
