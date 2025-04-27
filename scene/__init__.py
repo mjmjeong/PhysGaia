@@ -46,8 +46,8 @@ class Scene:
             print("Found particles.json file, assuming Static PhysTrack data set!")
             scene_info = sceneLoadTypeCallbacks["StaticPhysTrack"](args.source_path, args.white_background, args.eval, init_with_traj=args.init_with_traj)
             dataset_type="staticphystrack"
-        elif os.path.exists(os.path.join(args.source_path, "dynamic_camera_info_train.json")):
-            print("Found dynamic_camera_info.json file, assuming PhysTrack data set!")
+        elif os.path.exists(os.path.join(args.source_path, "camera_info_train.json")):
+            print("Found camera_info.json file, assuming PhysTrack data set!")
             scene_info = sceneLoadTypeCallbacks["PhysTrack"](args.source_path, args.white_background, args.eval, init_with_traj=args.init_with_traj)
             dataset_type="phystrack"
         elif os.path.exists(os.path.join(args.source_path, "sparse")):

@@ -30,6 +30,8 @@ from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
 from utils.general_utils import PILtoTorch
 from tqdm import tqdm
+from PIL import Image, UnidentifiedImageError
+import glob
 class CameraInfo(NamedTuple):
     uid: int
     R: np.array
@@ -197,6 +199,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
                            nerf_normalization=nerf_normalization,
                            ply_path=ply_path)
     return scene_info
+
 def generateCamerasFromTransforms(path, template_transformsfile, extension, maxtime, rot_axis="z"):
     trans_t = lambda t : torch.Tensor([
     [1,0,0,0],
@@ -243,6 +246,8 @@ def generateCamerasFromTransforms(path, template_transformsfile, extension, maxt
         cam_name = os.path.join(path, frame["file_path"] + extension)
         image_path = os.path.join(path, cam_name)
         image_name = Path(cam_name).stem
+        if rot_axis == "y":
+            image_path = os.path.join(path, "render", frame["file_path"] + extension)
         image = Image.open(image_path)
         im_data = np.array(image.convert("RGBA"))
         image = PILtoTorch(image,(800,800))
@@ -316,7 +321,7 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
             fovx = focal2fov(contents['fl_x'],contents['w'])
         frames = contents["frames"]
         for idx, frame in enumerate(frames):
-            cam_name = os.path.join(path, frame["file_path"] + extension)
+            cam_name = os.path.join(path, "render" ,frame["file_path"] + extension)
             if mapper is None:
                 time = 0.0
             else:
@@ -324,9 +329,22 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
 
             image_path = os.path.join(path, cam_name)
             image_name = Path(cam_name).stem
-            image = Image.open(image_path)
 
-            im_data = np.array(image.convert("RGBA"))
+            #import pdb; pdb.set_trace()
+            try:
+                image = Image.open(image_path)
+            except FileNotFoundError:
+                print(f"file {image_path} not found. Skipping. Is this intended bahavior?")
+                continue
+
+            try:
+
+                im_data = np.array(image.convert("RGBA"))
+            
+            except (OSError, UnidentifiedImageError) as e:
+                # truncated, corrupted, or unrecognized image
+                print(f"[BadImage] {image_path}: {e!r} – skipping.")
+                continue
 
             bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
 
@@ -351,9 +369,9 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
     return cam_infos
 
 def read_timeline(path):
-    with open(os.path.join(path, "dynamic_camera_info_train.json")) as json_file:
+    with open(os.path.join(path, "camera_info_train.json")) as json_file:
         train_json = json.load(json_file)
-    with open(os.path.join(path, "dynamic_camera_info_test.json")) as json_file:
+    with open(os.path.join(path, "camera_info_test.json")) as json_file:
         test_json = json.load(json_file)  
     time_line = [frame["time"] for frame in train_json["frames"]] + [frame["time"] for frame in test_json["frames"]]
     time_line = set(time_line)
@@ -448,23 +466,29 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
                            maxtime=max_time)
     return scene_info
 
-def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
-    train_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
     print("Reading Test Transforms")
-    test_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_test.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    test_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_test.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
     print("Generating Video Transforms")
-    video_cam_infos = generateCamerasFromTransforms(path, "dynamic_camera_info_train.json", extension, max_time, rot_axis="y")
+    video_cam_infos = generateCamerasFromTransforms(path, "camera_info_train.json", extension, max_time, rot_axis="y")
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
         ply_path = os.path.join(path, "traj_0_4dgs.ply")
         if not os.path.exists(ply_path):
-            with open(os.path.join(path, "dynamic_trajectories", "particles_frame_0001.json")) as json_file:
-                trajs = json.load(json_file)
-            xyz = np.stack([traj['xyz'] for traj in trajs], 0)
+            xyz = []
+
+            #import pdb; pdb.set_trace()
+            for json_path in glob.glob(os.path.join(path, "particles", "*/particles_frame_0001.json")):
+                with open(json_path) as json_file:
+                    trajs = json.load(json_file)
+                    xyz_object = np.stack([traj['position'] for traj in trajs], 0)
+                xyz.append(xyz_object)
+            xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
             pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
