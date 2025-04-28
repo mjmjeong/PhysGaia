@@ -141,6 +141,90 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
     sys.stdout.write('\n')
     return cam_infos
 
+def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, extension):
+    cam_infos = []
+
+    with open(os.path.join(path, transformsfile)) as json_file:
+        contents = json.load(json_file)
+        fovx = contents["camera_angle_x"]
+
+        frames = contents["frames"]
+        for idx, frame in enumerate(frames):
+            #cam_name = os.path.join(path, frame["file_path"] + extension)
+            cam_name = os.path.join(path + "/render", frame["file_path"] + extension)
+            frame_time = frame['time']
+
+            image_path = os.path.join(path, cam_name)
+            image_name = Path(cam_name).stem
+            image = Image.open(image_path)
+
+            im_data = np.array(image.convert("RGBA"))
+
+            bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
+
+            norm_data = im_data / 255.0
+            arr = norm_data[:,:,:3] * norm_data[:, :, 3:4] + bg * (1 - norm_data[:, :, 3:4])
+            image = Image.fromarray(np.array(arr*255.0, dtype=np.byte), "RGB")
+            fovy = focal2fov(fov2focal(fovx, image.size[0]), image.size[1])
+            FovY = fovy 
+            FovX = fovx
+            
+            pose = np.array(frame["transform_matrix"])
+            R = pose[:3,:3]
+            R = - R
+            R[:,0] = -R[:,0]
+            T = -pose[:3,3].dot(R)
+
+            cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
+                                        image_path=image_path, image_name=image_name, width=image.size[
+                                            0],
+                                        height=image.size[1], fid=frame_time))
+            
+    return cam_infos
+
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False):
+    print("Reading Training Transforms")
+    train_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_train.json", white_background, extension)
+    print("Reading Test Transforms")
+    test_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_test.json", white_background, extension)
+
+    nerf_normalization = getNerfppNorm(train_cam_infos)
+
+    if init_with_traj: # Traj's first frame
+        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        if not os.path.exists(ply_path):
+            particle_path = os.path.join(path, "particles")
+            all_xyz = []
+            for dirname in os.listdir(particle_path):
+                dir_path = os.path.join(particle_path, dirname)
+                if not os.path.isdir(dir_path):
+                    continue
+                with open(os.path.join(dir_path, "particles_frame_0001.json")) as json_file:
+                    trajs = json.load(json_file)
+                xyz = np.stack([traj['position'] for traj in trajs], 0)
+                all_xyz.append(xyz)
+            merged_xyz = np.concatenate(all_xyz, axis=0)
+            num_pts = merged_xyz.shape[0]
+            shs = np.random.random((num_pts, 3)) / 255.0
+            pcd = BasicPointCloud(points=merged_xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+            storePly(ply_path, merged_xyz, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+
+    else: # COLMAP init
+        ply_path = os.path.join(path, "fused.ply")
+        if not os.path.exists(ply_path):        
+            # TODO: xyz from colmap, others random/zero
+            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+        else:
+            pcd = fetchPly(ply_path)
+            
+    scene_info = SceneInfo(point_cloud=pcd,
+                           train_cameras=train_cam_infos,
+                           test_cameras=test_cam_infos,
+                           nerf_normalization=nerf_normalization,
+                           ply_path=ply_path)
+    return scene_info
 
 def fetchPly(path):
     plydata = PlyData.read(path)
@@ -621,6 +705,7 @@ def readPlenopticVideoDataset(datadir, eval, num_images, hold_id=[0]):
 
 sceneLoadTypeCallbacks = {
     "Colmap": readColmapSceneInfo,  # colmap dataset reader from official 3D Gaussian [https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/]
+    "PhysTrack": readPhysTrackInfo,
     "Blender": readNerfSyntheticInfo,  # D-NeRF dataset [https://drive.google.com/file/d/1uHVyApwqugXTFuIRRlE4abTW8_rrVeIK/view?usp=sharing]
     "DTU": readNeuSDTUInfo,  # DTU dataset used in Tensor4D [https://github.com/DSaurus/Tensor4D]
     "nerfies": readNerfiesInfo,  # NeRFies & HyperNeRF dataset proposed by [https://github.com/google/hypernerf/releases/tag/v0.1]
