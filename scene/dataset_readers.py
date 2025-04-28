@@ -453,7 +453,8 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
         ply_path = os.path.join(path, "fused.ply")
         if not os.path.exists(ply_path):        
             # TODO: xyz from colmap, others random/zero
-            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+            raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
+            #storePly(ply_path, xyzt, SH2RGB(shs) * 255)
         else:
             pcd = fetchPly(ply_path)
             
@@ -497,10 +498,32 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
             pcd = fetchPly(ply_path)
 
     else: # COLMAP init
-        ply_path = os.path.join(path, "fused.ply")
+
+        # Folder layout:  
+        # ├── database.db  
+        # ├── sparse/0/      ← raw sparse model (full-res, distorted)  
+        # └── dense/0/       ← dense workspace (undistorted, resized images)  
+
+        # 3D point cloud:  
+        # dense/0/fused.ply         ← dense fused cloud  
+        # dense/0/meshed-poisson.ply ← watertight mesh  
+
+        # Camera params:  
+        # sparse: sparse/0/cameras.bin & sparse/0/images.bin  
+        # dense:  dense/0/sparse/cameras.bin & dense/0/sparse/images.bin  
+
+        # Key diff:  
+        # sparse uses original pixel grid + distortion coefficients;  
+        # dense zeroes distortion & adjusts focal/center for undistorted image grid.
+        # dense directory also has "undistorted" images in dense/0/images
+
+        # CHECK: camera parameter은 COLMAP estimation을 사용하지 않고 주어진 것으로 합니꽈?
+
+        ply_path = os.path.join(path, "dense/0/fused.ply")
         if not os.path.exists(ply_path):        
             # TODO: xyz from colmap, others random/zero
-            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+            raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
+            #storePly(ply_path, xyzt, SH2RGB(shs) * 255)
         else:
             pcd = fetchPly(ply_path)
             
