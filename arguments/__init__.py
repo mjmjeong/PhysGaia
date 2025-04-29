@@ -58,6 +58,8 @@ class ModelParams(ParamGroup):
         self.add_points=False
         self.extension=".png"
         self.init_with_traj=False
+        self.init_frame_index=1
+        self.max_point_per_obj=5000
         self.llffhold=8
         super().__init__(parser, "Loading Parameters", sentinel)
 

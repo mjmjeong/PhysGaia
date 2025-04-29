@@ -1,8 +1,10 @@
 _base_ = './phystrack_default.py'
 
 ModelParams = dict(
-        init_with_traj=False,
-        white_background=False
+        init_with_traj=True,
+        white_background=False,
+        init_frame_index=100,
+        max_point_per_obj=5000
         )
 
 ModelHiddenParams = dict(

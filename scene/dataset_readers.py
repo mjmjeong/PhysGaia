@@ -467,7 +467,7 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
                            maxtime=max_time)
     return scene_info
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj = 5000):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
     train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
@@ -484,11 +484,13 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
             xyz = []
 
             #import pdb; pdb.set_trace()
-            for json_path in glob.glob(os.path.join(path, "particles", "*/particles_frame_0001.json")):
+            for json_path in glob.glob(os.path.join(path, "particles", f"*/particles_frame_{init_frame_index:04d}.json")):
                 with open(json_path) as json_file:
                     trajs = json.load(json_file)
+                    # randomly sample max_point_per_obj points
                     xyz_object = np.stack([traj['position'] for traj in trajs], 0)
-                xyz.append(xyz_object)
+                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=max(max_point_per_obj, xyz_object.shape[0]), replace=False)]
+                    xyz.append(xyz_object)
             xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
