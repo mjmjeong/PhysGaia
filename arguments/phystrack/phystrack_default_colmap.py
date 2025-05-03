@@ -1,5 +1,4 @@
-init_with_traj = True
-init_frame_index = 1
+init_with_traj = False
 
 grid_args = dict(
     canonical_num_levels=16,

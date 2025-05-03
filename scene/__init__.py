@@ -47,7 +47,8 @@ class Scene:
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval)
         elif os.path.exists(os.path.join(args.source_path, "camera_info_train.json")):
             print("Found camera_info_train.json file, assuming PhysTrack data set!")
-            scene_info = sceneLoadTypeCallbacks["PhysTrack"](args.source_path, args.white_background, args.eval, init_with_traj=args.init_with_traj)
+            scene_info = sceneLoadTypeCallbacks["PhysTrack"](args.source_path, args.white_background, args.eval, init_with_traj=args.init_with_traj, init_frame_index=args.init_frame_index,
+            max_point_per_obj=args.max_point_per_obj)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
             scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval)

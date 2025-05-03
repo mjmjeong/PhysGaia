@@ -182,7 +182,7 @@ def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, e
             
     return cam_infos
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000):
     print("Reading Training Transforms")
     train_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_train.json", white_background, extension)
     print("Reading Test Transforms")
@@ -199,9 +199,10 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
                 dir_path = os.path.join(particle_path, dirname)
                 if not os.path.isdir(dir_path):
                     continue
-                with open(os.path.join(dir_path, "particles_frame_0001.json")) as json_file:
+                with open(os.path.join(dir_path, f"particles_frame_{init_frame_index:04d}.json")) as json_file:
                     trajs = json.load(json_file)
                 xyz = np.stack([traj['position'] for traj in trajs], 0)
+                xyz = xyz[np.random.choice(xyz.shape[0], size=min(max_point_per_obj, xyz.shape[0]), replace=False)]
                 all_xyz.append(xyz)
             merged_xyz = np.concatenate(all_xyz, axis=0)
             num_pts = merged_xyz.shape[0]
