@@ -26,6 +26,8 @@ from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
 from utils.camera_utils import camera_nerfies_from_JSON
+from PIL import Image, UnidentifiedImageError
+import glob
 
 
 class CameraInfo(NamedTuple):
@@ -266,7 +268,7 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
     return cam_infos
 
 
-def readCustomCamerasFromTransforms(path, transformsfile, white_background, extension):
+def readCustomCamerasFromTransforms(path, transformsfile, white_background, extension='png'):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -275,9 +277,10 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
 
         frames = contents["frames"]
         for idx, frame in enumerate(frames):
-            cam_name = os.path.join(path, frame["file_path"] + extension)
+            cam_name = os.path.join(path, "render" ,frame["file_path"] + extension)
             frame_time = frame['time']
 
+            # CHECK: correct? nsy's job
             matrix = np.array(frame["transform_matrix"])
             R = -matrix[:3, :3]
             R[:, 0] = -R[:, 0]
@@ -285,9 +288,21 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
 
             image_path = os.path.join(path, cam_name)
             image_name = Path(cam_name).stem
-            image = Image.open(image_path)
+            
+            try:
+                image = Image.open(image_path)
+            except FileNotFoundError:
+                print(f"file {image_path} not found. Skipping. Is this intended bahavior?")
+                continue
 
-            im_data = np.array(image.convert("RGBA"))
+            try:
+
+                im_data = np.array(image.convert("RGBA"))
+            
+            except (OSError, UnidentifiedImageError) as e:
+                # truncated, corrupted, or unrecognized image
+                print(f"[BadImage] {image_path}: {e!r} – skipping.")
+                continue
 
             bg = np.array(
                 [1, 1, 1]) if white_background else np.array([0, 0, 0])
@@ -351,8 +366,8 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
-
-def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
+# TODO: static left as todo
+def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000):
     print("Reading Training Transforms")
     train_cam_infos = readCustomCamerasFromTransforms(
         path, "camera_info.json", white_background, extension)
@@ -369,18 +384,45 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
     if init_with_traj:
         ply_path = os.path.join(path, "traj_0_4dgs.ply")
         if not os.path.exists(ply_path):
-            with open(os.path.join(path, "particles.json")) as json_file:
-                trajs = json.load(json_file)
-
-            xyz = np.stack([traj['position'] for traj in trajs], 0)
+            xyz = []
+            #import pdb; pdb.set_trace()
+            for json_path in glob.glob(os.path.join(path, "particles", f"*/particles_frame_{init_frame_index:04d}.json")):
+                with open(json_path) as json_file:
+                    trajs = json.load(json_file)
+                    # randomly sample max_point_per_obj points
+                    xyz_object = np.stack([traj['position'] for traj in trajs], 0)
+                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=max(max_point_per_obj, xyz_object.shape[0]), replace=False)]
+                    xyz.append(xyz_object)
+            xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
             pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
             storePly(ply_path, xyz, SH2RGB(shs) * 255)
     
-    else: # COLMAP init
-        ply_path = os.path.join(path, "points3d.ply")
+    else: 
+        # COLMAP init
+
+        # Folder layout:  
+        # ├── database.db  
+        # ├── sparse/0/      ← raw sparse model (full-res, distorted)  
+        # └── dense/0/       ← dense workspace (undistorted, resized images)  
+
+        # 3D point cloud:  
+        # dense/0/fused.ply         ← dense fused cloud  
+        # dense/0/meshed-poisson.ply ← watertight mesh  
+
+        # Camera params:  
+        # sparse: sparse/0/cameras.bin & sparse/0/images.bin  
+        # dense:  dense/0/sparse/cameras.bin & dense/0/sparse/images.bin  
+
+        # Key diff:  
+        # sparse uses original pixel grid + distortion coefficients;  
+        # dense zeroes distortion & adjusts focal/center for undistorted image grid.
+        # dense directory also has "undistorted" images in dense/0/images
+        ply_path = os.path.join(path, "dense/0/fused.ply")
         if not os.path.exists(ply_path):
+            raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
+        
             # TODO: xyz from colmap, others random/zero
             num_pts = 100_000
             print(f"Generating random point cloud ({num_pts})...")
@@ -403,13 +445,13 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
     return scene_info
 
 
-def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000):
     print("Reading Training Transforms")
     train_cam_infos = readCustomCamerasFromTransforms(
-        path, "transforms_train.json", white_background, extension)
+        path, "camera_info_train.json", white_background, extension)
     print("Reading Test Transforms")
     test_cam_infos = readCustomCamerasFromTransforms(
-        path, "transforms_test.json", white_background, extension)
+        path, "camera_info_test.json", white_background, extension)
 
     if not eval:
         train_cam_infos.extend(test_cam_infos)
@@ -420,18 +462,45 @@ def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_
     if init_with_traj:
         ply_path = os.path.join(path, "traj_0_4dgs.ply")
         if not os.path.exists(ply_path):
-            with open(os.path.join(path, "dynamic_trajectories", "particles_frame_0001.json")) as json_file:
-                trajs = json.load(json_file)
-
-            xyz = np.stack([traj['xyz'] for traj in trajs], 0)
+            xyz = []
+            #import pdb; pdb.set_trace()
+            for json_path in glob.glob(os.path.join(path, "particles", f"*/particles_frame_{init_frame_index:04d}.json")):
+                with open(json_path) as json_file:
+                    trajs = json.load(json_file)
+                    # randomly sample max_point_per_obj points
+                    xyz_object = np.stack([traj['position'] for traj in trajs], 0)
+                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=max(max_point_per_obj, xyz_object.shape[0]), replace=False)]
+                    xyz.append(xyz_object)
+            xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
             pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
             storePly(ply_path, xyz, SH2RGB(shs) * 255)
     
-    else: # COLMAP init
-        ply_path = os.path.join(path, "points3d.ply")
+    else: 
+        # COLMAP init
+
+        # Folder layout:  
+        # ├── database.db  
+        # ├── sparse/0/      ← raw sparse model (full-res, distorted)  
+        # └── dense/0/       ← dense workspace (undistorted, resized images)  
+
+        # 3D point cloud:  
+        # dense/0/fused.ply         ← dense fused cloud  
+        # dense/0/meshed-poisson.ply ← watertight mesh  
+
+        # Camera params:  
+        # sparse: sparse/0/cameras.bin & sparse/0/images.bin  
+        # dense:  dense/0/sparse/cameras.bin & dense/0/sparse/images.bin  
+
+        # Key diff:  
+        # sparse uses original pixel grid + distortion coefficients;  
+        # dense zeroes distortion & adjusts focal/center for undistorted image grid.
+        # dense directory also has "undistorted" images in dense/0/images
+        ply_path = os.path.join(path, "dense/0/fused.ply")
         if not os.path.exists(ply_path):
+            raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
+        
             # TODO: xyz from colmap, others random/zero
             num_pts = 100_000
             print(f"Generating random point cloud ({num_pts})...")
