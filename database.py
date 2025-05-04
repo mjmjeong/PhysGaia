@@ -8,13 +8,13 @@ IS_PYTHON3 = sys.version_info[0] >= 3
 
 def array_to_blob(array):
     if IS_PYTHON3:
-        return array.tostring()
+        return array.tobytes()
     else:
         return np.getbuffer(array)
 
 def blob_to_array(blob, dtype, shape=(-1,)):
     if IS_PYTHON3:
-        return np.fromstring(blob, dtype=dtype).reshape(*shape)
+        return np.frombuffer(blob, dtype=dtype).reshape(*shape)
     else:
         return np.frombuffer(blob, dtype=dtype).reshape(*shape)
 
@@ -44,10 +44,10 @@ class COLMAPDatabase(sqlite3.Connection):
 
     def update_camera(self, model, width, height, params, camera_id):
         params = np.asarray(params, np.float64)
-        cursor = self.execute(
+        self.execute(
             "UPDATE cameras SET model=?, width=?, height=?, params=?, prior_focal_length=True WHERE camera_id=?",
-            (model, width, height, array_to_blob(params),camera_id))
-        return cursor.lastrowid
+            (model, width, height, array_to_blob(params), camera_id))
+        return camera_id
 
 def camTodatabase():
     import os
@@ -97,7 +97,34 @@ def camTodatabase():
                 widthList.append(width)
                 heightList.append(height)
                 paramsList.append(params)
+                
+                # Get current camera values before update (if any)
+                pre_update = db.execute("SELECT model, width, height, params FROM cameras WHERE camera_id=?", 
+                                       (cameraId,)).fetchone()
+                
+                # Perform update
                 camera_id = db.update_camera(cameraModel, width, height, params, cameraId)
+                
+                # Verify the update was successful by comparing new values
+                post_update = db.execute("SELECT model, width, height, params FROM cameras WHERE camera_id=?", 
+                                        (cameraId,)).fetchone()
+                
+                if not post_update:
+                    print(f"Error: Camera ID {cameraId} not found after update")
+                    continue
+                    
+                model_after, width_after, height_after, params_blob_after = post_update
+                params_after = blob_to_array(params_blob_after, np.float64)
+                
+                # Check if values match what we intended to update
+                if (model_after != cameraModel or 
+                    width_after != width or 
+                    height_after != height or 
+                    not np.allclose(params_after, params)):
+                    print(f"Warning: Camera ID {cameraId} values don't match expected after update")
+                    print(f"  Expected: model={cameraModel}, width={width}, height={height}")
+                    print(f"  Got: model={model_after}, width={width_after}, height={height_after}")
+                    print(f"  Params match: {np.allclose(params_after, params)}")
 
     # Commit the data to the file.
     db.commit()
@@ -109,6 +136,7 @@ def camTodatabase():
         assert camera_id == idList[i]
         assert model == modelList[i] and width == widthList[i] and height == heightList[i]
         assert np.allclose(params, paramsList[i])
+        print(f"{idList[i]}th camera updated")
 
     # Close database.db.
     db.close()
