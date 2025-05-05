@@ -497,7 +497,8 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
         # sparse uses original pixel grid + distortion coefficients;  
         # dense zeroes distortion & adjusts focal/center for undistorted image grid.
         # dense directory also has "undistorted" images in dense/0/images
-        ply_path = os.path.join(path, "dense/0/fused.ply")
+        # CHECK: workspace or 0?
+        ply_path = os.path.join(path, "colmap/dense/workspace/fused.ply")
         if not os.path.exists(ply_path):
             raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
         
