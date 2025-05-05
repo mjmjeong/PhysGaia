@@ -191,7 +191,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
-        ply_path = os.path.join(path, "traj_0_grid4d.ply")
+        ply_path = os.path.join(path, "traj_0_4dgs.ply")
         if not os.path.exists(ply_path):
             particle_path = os.path.join(path, "particles")
             all_xyz = []
@@ -213,7 +213,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
             pcd = fetchPly(ply_path)
 
     else: # COLMAP init
-        ply_path = os.path.join(path, "fused.ply")
+        ply_path = os.path.join(path, "dense/0/fused.ply")
         if not os.path.exists(ply_path):        
             # TODO: xyz from colmap, others random/zero
             storePly(ply_path, xyzt, SH2RGB(shs) * 255)
