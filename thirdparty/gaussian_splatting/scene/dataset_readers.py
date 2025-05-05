@@ -1021,7 +1021,7 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png", multiv
 
     
 
-def read_timeline(path, train_file="dynamic_camera_info_train.json", test_file="dynamic_camera_info_test.json"):
+def read_timeline(path, train_file="camera_info_train.json", test_file="camera_info_test.json"):
     with open(os.path.join(path, train_file)) as json_file:
         train_json = json.load(json_file)
     with open(os.path.join(path, test_file)) as json_file:
@@ -1128,21 +1128,29 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
                            ply_path=ply_path)
     return scene_info
 
-def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False, keep_rayinfo=True):
+def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False, keep_rayinfo=True, init_frame_index=1, max_point_per_obj = 5000):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
-    train_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_train.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+    train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
     print("Reading Test Transforms")
-    test_cam_infos = readCustomCamerasFromTransforms(path, "dynamic_camera_info_test.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+    test_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_test.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
-        ply_path = os.path.join(path, "traj_0.ply")
+        ply_path = os.path.join(path, "traj_0_4dgs.ply")
         if not os.path.exists(ply_path):
-            with open(os.path.join(path, "dynamic_trajectories", "particles_frame_0001.json")) as json_file:
-                trajs = json.load(json_file)
-            xyz = np.stack([traj['xyz'] for traj in trajs], 0)
+            xyz = []
+
+            #import pdb; pdb.set_trace()
+            for json_path in glob.glob(os.path.join(path, "particles", f"*/particles_frame_{init_frame_index:04d}.json")):
+                with open(json_path) as json_file:
+                    trajs = json.load(json_file)
+                    # randomly sample max_point_per_obj points
+                    xyz_object = np.stack([traj['position'] for traj in trajs], 0)
+                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=max(max_point_per_obj, xyz_object.shape[0]), replace=False)]
+                    xyz.append(xyz_object)
+            xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
             pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)), times=np.zeros((num_pts, 1)))
@@ -1152,9 +1160,10 @@ def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_
             pcd = fetchPly(ply_path)
 
     else: # COLMAP init
-        ply_path = os.path.join(path, "fused.ply")
+        ply_path = os.path.join(path, "dense/0/fused.ply")
         if not os.path.exists(ply_path):        
             # TODO: xyz from colmap, others random/zero
+            raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
             storePly(ply_path, xyzt, SH2RGB(shs) * 255)
         else:
             pcd = fetchPly(ply_path)
