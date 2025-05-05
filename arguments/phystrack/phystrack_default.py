@@ -1,5 +1,5 @@
 init_with_traj = True
-init_frame_index = 1
+init_frame_index = 120
 
 grid_args = dict(
     canonical_num_levels=16,
@@ -26,10 +26,10 @@ network_args = dict(
 grid_lr_scale = 50.0
 network_lr_scale = 5.0
 
-lambda_spatial_tv = 0.5
+lambda_spatial_tv = -0.5
 spatial_downsample_ratio = 0.1
 spatial_perturb_range = 1e-2
 
-lambda_temporal_tv = 0.5
+lambda_temporal_tv = -0.5
 temporal_downsample_ratio = 0.1
 temporal_perturb_range = [1e-2, 1e-2, 1e-2, 1e-3]

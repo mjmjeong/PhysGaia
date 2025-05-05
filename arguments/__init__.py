@@ -59,7 +59,7 @@ class ModelParams(ParamGroup):
         self.load2gpu_on_the_fly = False
         self.init_with_traj = False
         self.init_frame_index = 1
-        self.max_point_per_object = 5000
+        self.max_point_per_obj = 2500
 
         self.grid_args = dict(
             canonical_num_levels=16,

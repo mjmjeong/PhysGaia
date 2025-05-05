@@ -191,7 +191,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
-        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        ply_path = os.path.join(path, "traj_0_grid4d.ply")
         if not os.path.exists(ply_path):
             particle_path = os.path.join(path, "particles")
             all_xyz = []
