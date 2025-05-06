@@ -141,7 +141,23 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
     sys.stdout.write('\n')
     return cam_infos
 
-def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, extension):
+def read_timeline(path):
+    with open(os.path.join(path, "camera_info_train.json")) as json_file:
+        train_json = json.load(json_file)
+    with open(os.path.join(path, "camera_info_test.json")) as json_file:
+        test_json = json.load(json_file)  
+    time_line = [frame["time"] for frame in train_json["frames"]] + [frame["time"] for frame in test_json["frames"]]
+    time_line = set(time_line)
+    time_line = list(time_line)
+    time_line.sort()
+    timestamp_mapper = {}
+    max_time_float = max(time_line)
+    for index, time in enumerate(time_line):
+        timestamp_mapper[time] = time/max_time_float
+
+    return timestamp_mapper, max_time_float
+
+def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, extension, mapper):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -152,7 +168,7 @@ def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, e
         for idx, frame in enumerate(frames):
             #cam_name = os.path.join(path, frame["file_path"] + extension)
             cam_name = os.path.join(path + "/render", frame["file_path"] + extension)
-            frame_time = frame['time']
+            frame_time = mapper[frame['time']]
 
             image_path = os.path.join(path, cam_name)
             image_name = Path(cam_name).stem
@@ -183,15 +199,16 @@ def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, e
     return cam_infos
 
 def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000):
+    timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
-    train_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_train.json", white_background, extension)
+    train_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, mapper=timestamp_mapper)
     print("Reading Test Transforms")
-    test_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_test.json", white_background, extension)
+    test_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_test.json", white_background, extension, mapper=timestamp_mapper)
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
-        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        ply_path = os.path.join(path, "traj_0_grid4d.ply")
         if not os.path.exists(ply_path):
             particle_path = os.path.join(path, "particles")
             all_xyz = []
@@ -213,7 +230,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
             pcd = fetchPly(ply_path)
 
     else: # COLMAP init
-        ply_path = os.path.join(path, "dense/0/fused.ply")
+        ply_path = os.path.join(path, "fused.ply")
         if not os.path.exists(ply_path):        
             # TODO: xyz from colmap, others random/zero
             storePly(ply_path, xyzt, SH2RGB(shs) * 255)
