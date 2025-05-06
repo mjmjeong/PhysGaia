@@ -1,5 +1,6 @@
 init_with_traj = True
-init_frame_index = 120
+init_frame_index = 1
+max_point_per_obj = 2500
 
 grid_args = dict(
     canonical_num_levels=16,
@@ -14,7 +15,7 @@ grid_args = dict(
     deform_desired_resolution=[32, 32, 16],
     deform_log2_hashmap_size=19,
 
-    bound=1.6,
+    bound=2.0,
 )
 
 network_args = dict(
@@ -23,13 +24,15 @@ network_args = dict(
     directional=True,
 )
 
-grid_lr_scale = 50.0
-network_lr_scale = 5.0
+scale_xyz = 0.01
 
-lambda_spatial_tv = -0.5
+grid_lr_scale = 5.0
+network_lr_scale = 1.0
+
+lambda_spatial_tv = 0.0
 spatial_downsample_ratio = 0.1
 spatial_perturb_range = 1e-2
 
-lambda_temporal_tv = -0.5
+lambda_temporal_tv = 0.0
 temporal_downsample_ratio = 0.1
 temporal_perturb_range = [1e-2, 1e-2, 1e-2, 1e-3]
