@@ -91,3 +91,7 @@ dmypy.json
 .vscode/
 
 # Local development
+output/
+
+*.pyc
+*.so
