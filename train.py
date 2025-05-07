@@ -279,11 +279,21 @@ if __name__ == "__main__":
 
     print("Optimizing " + args.model_path)
 
+    # save args.init_with_traj, args.init_frame_index, args.max_point_per_obj and keep the rest of the args
+    init_with_traj = args.init_with_traj
+    init_frame_index = args.init_frame_index
+    max_point_per_obj = args.max_point_per_obj
+
     if args.conf is not None and os.path.exists(args.conf):
         print("Find Config:", args.conf)
         args = merge_config(args, args.conf)
     else:
         print("[WARNING] Using default config.")
+    
+    # override with saved args
+    args.init_with_traj = init_with_traj
+    args.init_frame_index = init_frame_index
+    args.max_point_per_obj = max_point_per_obj
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
