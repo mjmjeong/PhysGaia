@@ -26,6 +26,7 @@ import glob
 import natsort
 from simple_knn._C import distCUDA2
 import torch
+from PIL import Image, UnidentifiedImageError
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -1046,7 +1047,7 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
 
         frames = contents["frames"]
         for idx, frame in enumerate(frames):
-            cam_name = os.path.join(path, frame["file_path"] + extension)
+            cam_name = os.path.join(path, "render", frame["file_path"] + extension)
             if mapper is None:
                 time = 0.0
             else:
@@ -1062,9 +1063,20 @@ def readCustomCamerasFromTransforms(path, transformsfile, white_background, exte
             # image
             image_path = os.path.join(path, cam_name)
             image_name = Path(cam_name).stem
-            image = Image.open(image_path)
+            try:
+                image = Image.open(image_path)
+            except FileNotFoundError:
+                print(f"file {image_path} not found. Skipping. Is this intended bahavior?")
+                continue
 
-            im_data = np.array(image.convert("RGBA"))
+            try:
+
+                im_data = np.array(image.convert("RGBA"))
+            
+            except (OSError, UnidentifiedImageError) as e:
+                # truncated, corrupted, or unrecognized image
+                print(f"[BadImage] {image_path}: {e!r} – skipping.")
+                continue
 
             bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
 
@@ -1128,7 +1140,7 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
                            ply_path=ply_path)
     return scene_info
 
-def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_traj=False, keep_rayinfo=True, init_frame_index=1, max_point_per_obj = 5000):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, keep_rayinfo=True, init_frame_index=1, max_point_per_obj = 5000):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
     train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
@@ -1138,7 +1150,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
-        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        ply_path = os.path.join(path, "traj_0_spacetime.ply")
         if not os.path.exists(ply_path):
             xyz = []
 
@@ -1148,7 +1160,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_
                     trajs = json.load(json_file)
                     # randomly sample max_point_per_obj points
                     xyz_object = np.stack([traj['position'] for traj in trajs], 0)
-                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=max(max_point_per_obj, xyz_object.shape[0]), replace=False)]
+                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(max_point_per_obj, xyz_object.shape[0]), replace=False)]
                     xyz.append(xyz_object)
             xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
@@ -1160,7 +1172,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".jpg", init_with_
             pcd = fetchPly(ply_path)
 
     else: # COLMAP init
-        ply_path = os.path.join(path, "dense/0/fused.ply")
+        ply_path = os.path.join(path, "colmap/dense/0/fused.ply")
         if not os.path.exists(ply_path):        
             # TODO: xyz from colmap, others random/zero
             raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
