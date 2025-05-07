@@ -489,7 +489,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
                     trajs = json.load(json_file)
                     # randomly sample max_point_per_obj points
                     xyz_object = np.stack([traj['position'] for traj in trajs], 0)
-                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=max(max_point_per_obj, xyz_object.shape[0]), replace=False)]
+                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(max_point_per_obj, xyz_object.shape[0]), replace=False)]
                     xyz.append(xyz_object)
             xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
