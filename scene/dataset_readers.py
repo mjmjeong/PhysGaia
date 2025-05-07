@@ -27,6 +27,7 @@ from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
 from utils.camera_utils import camera_nerfies_from_JSON
 from tqdm import tqdm
+from PIL import UnidentifiedImageError
 
 
 class CameraInfo(NamedTuple):
@@ -172,9 +173,21 @@ def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, e
 
             image_path = os.path.join(path, cam_name)
             image_name = Path(cam_name).stem
-            image = Image.open(image_path)
 
-            im_data = np.array(image.convert("RGBA"))
+            try:
+                image = Image.open(image_path)
+            except FileNotFoundError:
+                print(f"file {image_path} not found. Skipping. Is this intended bahavior?")
+                continue
+
+            try:
+
+                im_data = np.array(image.convert("RGBA"))
+            
+            except (OSError, UnidentifiedImageError) as e:
+                # truncated, corrupted, or unrecognized image
+                print(f"[BadImage] {image_path}: {e!r} – skipping.")
+                continue
 
             bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
 
@@ -198,6 +211,42 @@ def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, e
             
     return cam_infos
 
+def validate_json_file(file_path):
+    """Validate JSON file and return error details if malformed."""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+            json.loads(content)
+        return True, None
+    except json.JSONDecodeError as e:
+        # Get the problematic line and context
+        line_no = e.lineno
+        col_no = e.colno
+        char_pos = e.pos
+        
+        # Read the file to get the problematic line
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+            if line_no <= len(lines):
+                problematic_line = lines[line_no - 1]
+                context_start = max(0, line_no - 3)
+                context_end = min(len(lines), line_no + 10)  # Show 10 lines after error instead of 2
+                context = lines[context_start:context_end]
+                
+                error_msg = f"JSON Error in {file_path}:\n"
+                error_msg += f"Line {line_no}, Column {col_no}: {str(e)}\n"
+                error_msg += "Context:\n"
+                for i, line in enumerate(context, start=context_start + 1):
+                    prefix = ">>> " if i == line_no else "    "
+                    error_msg += f"{prefix}{i}: {line}"
+                
+                # Add a note about the error location
+                error_msg += f"\nError occurred at character position {char_pos} in the file.\n"
+                
+                return False, error_msg
+            else:
+                return False, f"JSON Error in {file_path}: {str(e)}"
+
 def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
@@ -208,6 +257,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
+        print("Initializing with trajectory")
         ply_path = os.path.join(path, "traj_0_grid4d.ply")
         if not os.path.exists(ply_path):
             particle_path = os.path.join(path, "particles")
@@ -216,11 +266,29 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
                 dir_path = os.path.join(particle_path, dirname)
                 if not os.path.isdir(dir_path):
                     continue
-                with open(os.path.join(dir_path, f"particles_frame_{init_frame_index:04d}.json")) as json_file:
-                    trajs = json.load(json_file)
-                xyz = np.stack([traj['position'] for traj in trajs], 0)
-                xyz = xyz[np.random.choice(xyz.shape[0], size=min(max_point_per_obj, xyz.shape[0]), replace=False)]
-                all_xyz.append(xyz)
+                json_path = os.path.join(dir_path, f"particles_frame_{init_frame_index:04d}.json")
+                
+                # Validate JSON before loading
+                is_valid, error_msg = validate_json_file(json_path)
+                if not is_valid:
+                    print(f"Error in JSON file {json_path}:")
+                    print(error_msg)
+                    print("exiting")
+                    exit()
+                
+                try:
+                    with open(json_path) as json_file:
+                        trajs = json.load(json_file)
+                    xyz = np.stack([traj['position'] for traj in trajs], 0)
+                    xyz = xyz[np.random.choice(xyz.shape[0], size=min(max_point_per_obj, xyz.shape[0]), replace=False)]
+                    all_xyz.append(xyz)
+                except Exception as e:
+                    print(f"Error processing {json_path}: {str(e)}")
+                    continue
+                    
+            if not all_xyz:
+                raise RuntimeError("No valid trajectory data found. Please check your JSON files.")
+                
             merged_xyz = np.concatenate(all_xyz, axis=0)
             num_pts = merged_xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
@@ -230,9 +298,10 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
             pcd = fetchPly(ply_path)
 
     else: # COLMAP init
-        ply_path = os.path.join(path, "fused.ply")
+        ply_path = os.path.join(path, "colmap/dense/0/fused.ply")
         if not os.path.exists(ply_path):        
             # TODO: xyz from colmap, others random/zero
+            raise NotImplementedError("Colmap random init not implemented yet")
             storePly(ply_path, xyzt, SH2RGB(shs) * 255)
         else:
             pcd = fetchPly(ply_path)

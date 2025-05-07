@@ -95,3 +95,4 @@ output/
 
 *.pyc
 *.so
+tmp_build/
