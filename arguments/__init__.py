@@ -58,6 +58,7 @@ class ModelParams(ParamGroup):
         self.add_points=False
         self.extension=".png"
         self.init_with_traj=False
+        self.num_views="single"
         self.init_frame_index=1
         self.max_point_per_obj=5000
         self.llffhold=8

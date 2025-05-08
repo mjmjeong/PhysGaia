@@ -467,14 +467,24 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".png", init
                            maxtime=max_time)
     return scene_info
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj = 5000):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj = 5000, num_views="single"):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
-    train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    if num_views == "single":
+        train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train_mono.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    elif num_views == "double":
+        train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
+    else:
+        raise ValueError(f"Invalid number of views: {num_views}")
     print("Reading Test Transforms")
     test_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_test.json", white_background, extension, mapper=timestamp_mapper, resolution=None)
     print("Generating Video Transforms")
-    video_cam_infos = generateCamerasFromTransforms(path, "camera_info_train.json", extension, max_time, rot_axis="y")
+    if num_views == "single":
+        video_cam_infos = generateCamerasFromTransforms(path, "camera_info_train_mono.json", extension, max_time, rot_axis="y")
+    elif num_views == "double":
+        video_cam_infos = generateCamerasFromTransforms(path, "camera_info_train.json", extension, max_time, rot_axis="y")
+    else:
+        raise ValueError(f"Invalid number of views: {num_views}")
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
