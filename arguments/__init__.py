@@ -61,6 +61,7 @@ class ModelParams(ParamGroup):
         self.init_with_traj=False
         self.init_frame_index=1
         self.max_point_per_obj=5000
+        self.view_type="mono"
         self.is_blender = False
         self.is_6dof = False
         super().__init__(parser, "Loading Parameters", sentinel)

@@ -375,14 +375,10 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
     test_cam_infos = readCustomCamerasFromTransforms(
         path, "camera_info.json", white_background, extension)
 
-    if not eval:
-        train_cam_infos.extend(test_cam_infos)
-        test_cam_infos = []
-
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj:
-        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        ply_path = os.path.join(path, "traj_0_deform.ply")
         if not os.path.exists(ply_path):
             xyz = []
             #import pdb; pdb.set_trace()
@@ -445,22 +441,24 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
     return scene_info
 
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000, view_type="mono"):
     print("Reading Training Transforms")
-    train_cam_infos = readCustomCamerasFromTransforms(
-        path, "camera_info_train.json", white_background, extension)
+    if view_type == "mono":
+        train_cam_infos = readCustomCamerasFromTransforms(
+            path, "camera_info_train_mono.json", white_background, extension)
+    elif view_type == "multi":
+        train_cam_infos = readCustomCamerasFromTransforms(
+            path, "camera_info_train.json", white_background, extension)
+    else:
+        raise NotImplementedError(f"view_type {view_type} not supported")
     print("Reading Test Transforms")
     test_cam_infos = readCustomCamerasFromTransforms(
         path, "camera_info_test.json", white_background, extension)
 
-    if not eval:
-        train_cam_infos.extend(test_cam_infos)
-        test_cam_infos = []
-
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj:
-        ply_path = os.path.join(path, "traj_0_4dgs.ply")
+        ply_path = os.path.join(path, "traj_0_deform.ply")
         if not os.path.exists(ply_path):
             xyz = []
             #import pdb; pdb.set_trace()
