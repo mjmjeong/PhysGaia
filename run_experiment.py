@@ -77,6 +77,7 @@ num_views = [
 # Additional arguments that might vary
 additional_args = [
     "--configs arguments/phystrack/debug.py",
+    "--eval",
 ]
 
 # Generate all combinations and prepare to track results
