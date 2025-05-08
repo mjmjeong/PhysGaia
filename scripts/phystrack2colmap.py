@@ -24,6 +24,7 @@ def rotmat2qvec(R):
     return qvec
 
 root_dir = sys.argv[1]
+num_views = sys.argv[2]
 colmap_dir = os.path.join(root_dir,"sparse_")
 if not os.path.exists(colmap_dir):
     os.makedirs(colmap_dir)
@@ -35,7 +36,12 @@ image_dir = os.path.join(root_dir)
 images = os.listdir(image_dir)
 images.sort()
 
-camera_json = os.path.join(root_dir,"camera_info_train.json")
+if num_views == "single":
+    camera_json = os.path.join(root_dir,"camera_info_train_mono.json")
+elif num_views == "double":
+    camera_json = os.path.join(root_dir,"camera_info_train.json")
+else:
+    raise ValueError(f"Invalid number of views: {num_views}")
 
 with open (camera_json) as f:
     meta = json.load(f)

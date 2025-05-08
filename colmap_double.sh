@@ -1,11 +1,11 @@
-
+# default is colmap double. uses directory "colmap"
 
 workdir=$1
 datatype=$2 # blender, hypernerf, llff, phystrack
 export CUDA_VISIBLE_DEVICES=0
 rm -rf $workdir/sparse_
 rm -rf $workdir/image_colmap
-python scripts/"$datatype"2colmap.py $workdir
+python scripts/"$datatype"2colmap.py $workdir double
 rm -rf $workdir/colmap
 rm -rf $workdir/colmap/sparse/0
 
