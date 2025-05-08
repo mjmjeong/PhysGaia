@@ -284,7 +284,16 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
 
+    if not "--num_views" in sys.argv[1:]:
+        raise ValueError("num_views option is required")
+    else:
+        num_views = sys.argv[sys.argv.index("--num_views") + 1]
+    if not num_views in ["single", "double"]:
+        raise ValueError("num_views option must be either single or double")
+
     print("Optimizing " + args.model_path)
+
+    print(args)
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
