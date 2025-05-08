@@ -467,21 +467,30 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj:
+        
+        print(f"Initializing with traj")
         ply_path = os.path.join(path, "traj_0_deform.ply")
         if not os.path.exists(ply_path):
             xyz = []
-            #import pdb; pdb.set_trace()
-            for json_path in glob.glob(os.path.join(path, "particles", f"*/particles_frame_{init_frame_index:04d}.json")):
-                with open(json_path) as json_file:
-                    trajs = json.load(json_file)
-                    # randomly sample max_point_per_obj points
-                    xyz_object = np.stack([traj['position'] for traj in trajs], 0)
-                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(max_point_per_obj, xyz_object.shape[0]), replace=False)]
-                    xyz.append(xyz_object)
+
+            particles_path = os.path.join(path, "particles")
+            # for directory in particles_path, find all particles_frame_{init_frame_index:04d}.json
+            for directory in os.listdir(particles_path):
+                if os.path.isdir(os.path.join(particles_path, directory)):
+                    # num_files
+                    num_files = len(os.listdir(os.path.join(particles_path, directory)))
+                    point_per_frame = max_point_per_obj // num_files
+                    for i in range(num_files):
+                        json_path = os.path.join(particles_path, directory, f"particles_frame_{i+1:04d}.json")
+                        with open(json_path) as json_file:
+                            trajs = json.load(json_file)
+                            xyz_object = np.stack([traj['position'] for traj in trajs], 0)
+                            xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(point_per_frame, xyz_object.shape[0]), replace=False)]
+                            xyz.append(xyz_object)
             xyz = np.concatenate(xyz, axis=0)
             num_pts = xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
-            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))    
             storePly(ply_path, xyz, SH2RGB(shs) * 255)
     
     else: 
@@ -505,7 +514,13 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
         # dense zeroes distortion & adjusts focal/center for undistorted image grid.
         # dense directory also has "undistorted" images in dense/0/images
         # CHECK: workspace or 0?
-        ply_path = os.path.join(path, "colmap/dense/workspace/fused.ply")
+        if num_views == "single":
+            ply_path = os.path.join(path, "colmap_single/dense/0/fused.ply")
+        elif num_views == "double":
+            ply_path = os.path.join(path, "colmap/dense/0/fused.ply")
+        else:
+            raise ValueError(f"Invalid number of views: {num_views}")
+        
         if not os.path.exists(ply_path):
             raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
         
