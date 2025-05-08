@@ -96,3 +96,4 @@ output/
 *.pyc
 *.so
 tmp_build/
+**/__pycache__/
