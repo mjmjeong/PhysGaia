@@ -64,7 +64,7 @@ class Scene:
         elif os.path.exists(os.path.join(args.source_path, "camera_info_train.json")):
             print("Found camera_info.json file, assuming PhysTrack data set!")
             scene_info = sceneLoadTypeCallbacks["PhysTrack"](args.source_path, args.white_background, args.eval, 
-                                                            init_with_traj=args.init_with_traj, keep_rayinfo=keep_rayinfo)
+                                                            init_with_traj=args.init_with_traj, keep_rayinfo=keep_rayinfo, num_views=args.num_views)
             dataset_type="phystrack"
 
         elif loader == "colmap" or loader == "colmapvalid": # colmapvalid only for testing

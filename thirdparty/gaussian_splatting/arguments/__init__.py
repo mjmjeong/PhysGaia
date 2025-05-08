@@ -73,6 +73,7 @@ class ModelParams(ParamGroup):
         self.model = "gmodel" # 
         self.loader = "colmap" #
         self.init_with_traj=False
+        self.num_views="single"
         super().__init__(parser, "Loading Parameters", sentinel)
 
     def extract(self, args):

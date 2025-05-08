@@ -1151,10 +1151,15 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
                            ply_path=ply_path)
     return scene_info
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, keep_rayinfo=True, init_frame_index=1, max_point_per_obj = 5000):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, keep_rayinfo=True, init_frame_index=1, max_point_per_obj = 5000, num_views="single"):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
-    train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+    if num_views == "single":
+        train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train_mono.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+    elif num_views == "double":
+        train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train_stereo.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+    else:
+        raise ValueError(f"Invalid number of views: {num_views}")
     print("Reading Test Transforms")
     test_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_test.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
 
