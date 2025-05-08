@@ -48,6 +48,7 @@ except:
         focal = [meta['frames'][0]['fl_x'],meta['frames'][0]['fl_y']]
     except:
         # MODIFIED: image size hardcoded to 640x720 
+        # is this order right?
         image_size = 640,720
         focal_x = fov2focal(meta['camera_angle_x'], 640)
         focal_y = fov2focal(meta['camera_angle_x'], 720)
@@ -60,7 +61,7 @@ object_cameras_file = open(os.path.join(colmap_dir,"cameras.txt"),"w")
 idx=0
 sizes=1
 cnt=0
-while len(meta['frames'])//sizes > 300:
+while len(meta['frames'])//sizes > 1000:
     sizes += 1
 for frame in meta['frames']:
     cnt+=1
