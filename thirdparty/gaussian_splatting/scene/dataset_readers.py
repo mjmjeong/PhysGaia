@@ -570,6 +570,17 @@ def fetchPly(path):
     normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
     return BasicPointCloud(points=positions, colors=colors, normals=normals, times=times)
 
+def fetchPly_from_xyz(path):
+    plydata = PlyData.read(path)
+    vertices = plydata['vertex']
+    positions = np.vstack([vertices['x'], vertices['y'], vertices['z']]).T
+    # times initialized to ones
+    #import pdb; pdb.set_trace()
+    times = np.ones((positions.shape[0], 1))
+    colors = np.vstack([vertices['red'], vertices['green'], vertices['blue']]).T / 255.0
+    normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
+    return BasicPointCloud(points=positions, colors=colors, normals=normals, times=times)
+
 def storePly(path, xyzt, rgb):
     # Define the dtype for the structured array
     dtype = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'),('t','f4'),
@@ -1131,7 +1142,7 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
             # TODO: xyz from colmap, others random/zero
             storePly(ply_path, xyzt, SH2RGB(shs) * 255)
         else:
-            pcd = fetchPly(ply_path)
+            pcd = fetchPly_from_xyz(ply_path)
             
     scene_info = SceneInfo(point_cloud=pcd,
                            train_cameras=train_cam_infos,
@@ -1150,35 +1161,47 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
     if init_with_traj: # Traj's first frame
+        print(f"Initializing with traj")
         ply_path = os.path.join(path, "traj_0_spacetime.ply")
         if not os.path.exists(ply_path):
             xyz = []
+            times = []
 
-            #import pdb; pdb.set_trace()
-            for json_path in glob.glob(os.path.join(path, "particles", f"*/particles_frame_{init_frame_index:04d}.json")):
-                with open(json_path) as json_file:
-                    trajs = json.load(json_file)
-                    # randomly sample max_point_per_obj points
-                    xyz_object = np.stack([traj['position'] for traj in trajs], 0)
-                    xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(max_point_per_obj, xyz_object.shape[0]), replace=False)]
-                    xyz.append(xyz_object)
+            particles_path = os.path.join(path, "particles")
+            # for directory in particles_path, find all particles_frame_{init_frame_index:04d}.json
+            for directory in os.listdir(particles_path):
+                if os.path.isdir(os.path.join(particles_path, directory)):
+                    # num_files
+                    num_files = len(os.listdir(os.path.join(particles_path, directory)))
+                    point_per_frame = max_point_per_obj // num_files
+                    for i in range(num_files):
+                        json_path = os.path.join(particles_path, directory, f"particles_frame_{i+1:04d}.json")
+                        with open(json_path) as json_file:
+                            trajs = json.load(json_file)
+                            xyz_object = np.stack([traj['position'] for traj in trajs], 0)
+                            xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(point_per_frame, xyz_object.shape[0]), replace=False)]
+                            xyz.append(xyz_object)
+                            times.append(np.ones((xyz_object.shape[0], 1)) * i / num_files)
             xyz = np.concatenate(xyz, axis=0)
+            times = np.concatenate(times, axis=0)
             num_pts = xyz.shape[0]
             shs = np.random.random((num_pts, 3)) / 255.0
-            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)), times=np.zeros((num_pts, 1)))
-            xyzt = np.concatenate((xyz, np.zeros((num_pts, 1))), axis=1)
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)), times=times)
+            xyzt =np.concatenate( (xyz, times), axis=1)     
             storePly(ply_path, xyzt, SH2RGB(shs) * 255)
         else:
             pcd = fetchPly(ply_path)
 
     else: # COLMAP init
+        print(f"Initializing with COLMAP")
         ply_path = os.path.join(path, "colmap/dense/0/fused.ply")
         if not os.path.exists(ply_path):        
-            # TODO: xyz from colmap, others random/zero
             raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
             storePly(ply_path, xyzt, SH2RGB(shs) * 255)
         else:
-            pcd = fetchPly(ply_path)
+            # fused.ply from colmap should exist
+            # however, we cannot use it as is, instead attach time informations 
+            pcd = fetchPly_from_xyz(ply_path)
             
     scene_info = SceneInfo(point_cloud=pcd,
                            train_cameras=train_cam_infos,

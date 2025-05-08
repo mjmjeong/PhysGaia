@@ -402,6 +402,7 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
 if __name__ == "__main__":
     
     args, lp_extract, op_extract, pp_extract = getparser()
+    print(args)
     setgtisint8(op_extract.gtisint8)
     train(lp_extract, op_extract, pp_extract, args.save_iterations, args.debug_from, densify=args.densify, duration=args.duration, rgbfunction=args.rgbfunction, rdpip=args.rdpip)
 
