@@ -1,0 +1,24 @@
+name: interactive-shell
+image: 
+  url: docker.io/snucvlab/som:v3.1
+  credential_name: "SNU CVLAB"
+command: ["/bin/sh"]
+resources:
+  cluster: snu-cvlab-mid
+  preset: 1gpu-a5000
+# interactive: 
+#   max_runtime: 24h
+workspace:
+  editor: vscode
+  max_runtime: 24h
+# container:
+#   entrypoint: ""
+
+# container:
+#   private: true
+#   credentials: "SNU CVLAB"
+#   credentials: docker-credentials
+# volumeMounts:
+#   - hostPath: /131_data
+#     mountPath: /131_data
+#     mode: ReadWrite
