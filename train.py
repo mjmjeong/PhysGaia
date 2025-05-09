@@ -220,8 +220,28 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
         
         loss.backward()
         if torch.isnan(loss).any():
-            print("loss is nan,end training, reexecv program now.")
+            print("loss is nan, end training, reexecv program now.")
             os.execv(sys.executable, [sys.executable] + sys.argv)
+            
+        # Apply gradient clipping to all parameters in the optimizer
+        if hasattr(opt, 'clip_grad_norm') and opt.clip_grad_norm > 0:
+            # Get all parameters being optimized
+            all_params = []
+            for param_group in gaussians.optimizer.param_groups:
+                all_params.extend(param_group['params'])
+                
+            # Clip gradients for all parameters at once
+            torch.nn.utils.clip_grad_norm_(all_params, opt.clip_grad_norm)
+
+            if stage == "fine":
+                print("clipping fine stage gradient")
+            
+            # # Check for NaN gradients
+            # for param in all_params:
+            #     if param.grad is not None and torch.isnan(param.grad).any():
+            #         print("NaN gradient detected, restarting program")
+            #         os.execv(sys.executable, [sys.executable] + sys.argv)
+                    
         viewspace_point_tensor_grad = torch.zeros_like(viewspace_point_tensor)
         for idx in range(0, len(viewspace_point_tensor_list)):
             viewspace_point_tensor_grad = viewspace_point_tensor_grad + viewspace_point_tensor_list[idx].grad
@@ -392,6 +412,7 @@ def setup_seed(seed):
      np.random.seed(seed)
      random.seed(seed)
      torch.backends.cudnn.deterministic = True
+     
 if __name__ == "__main__":
     # Set up command line argument parser
     # torch.set_default_tensor_type('torch.FloatTensor')
@@ -430,6 +451,7 @@ if __name__ == "__main__":
         config = mmcv.Config.fromfile(args.configs)
         args = merge_hparams(args, config)
     print("Optimizing " + args.model_path)
+    print(args)
 
     # Initialize system state (RNG)
     safe_state(args.quiet)

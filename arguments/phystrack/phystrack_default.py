@@ -12,6 +12,8 @@ OptimizationParams = dict(
     pruning_interval = 8000,
     percent_dense = 0.01,
     render_process=False,
+    # TODO: remove this
+    clip_grad_norm = 0.0,
     # no_do=False,
     # no_dshs=False
     
