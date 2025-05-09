@@ -131,4 +131,3 @@ if __name__ == '__main__':
 
     main(args.voxel_dir, args.source, args.out_dir,
          args.start, args.end, args.dt, args.mode)
-```
