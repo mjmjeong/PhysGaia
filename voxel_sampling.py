@@ -24,6 +24,21 @@ def write_ply(filename: str, points: torch.Tensor):
     print(f"Wrote PLY: {filename} with {pts.shape[0]} points")
 
 
+def write_particles_json(filename: str, points: torch.Tensor):
+    """
+    Write particle positions to a JSON file.
+
+    Args:
+        filename: Path to the output JSON file.
+        points: (N, 3) tensor of point positions on CPU.
+    """
+    pts = points.cpu().tolist()
+    data = [{"id": i, "position": p} for i, p in enumerate(pts)]
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4)
+    print(f"Wrote JSON: {filename} with {len(data)} particles")
+
+
 def load_velocity_field(path: str, device: torch.device):
     """
     Load a JSON velocity field and metadata.
@@ -44,12 +59,10 @@ def load_velocity_field(path: str, device: torch.device):
 
     resolution = tuple(data['grid_info']['resolution'])
     voxel_size = torch.tensor(data['grid_info']['voxelSize'], device=device)
-
     grid = torch.zeros((*resolution, 3), device=device)
     for v in data['voxels']:
         i, j, k = v['i'], v['j'], v['k']
         grid[i, j, k] = torch.tensor(v['vel'], device=device)
-
     origin = torch.tensor(data['voxels'][0]['world_pos'], device=device)
     return grid, origin, voxel_size, resolution
 
@@ -95,27 +108,28 @@ def update_particles(pts: torch.Tensor, grid: torch.Tensor,
     idxs[:, 0].clamp_(0, nx - 1)
     idxs[:, 1].clamp_(0, ny - 1)
     idxs[:, 2].clamp_(0, nz - 1)
-
     vels = grid[idxs[:, 0], idxs[:, 1], idxs[:, 2]]
     return pts + vels * dt
 
 
 def main(voxel_dir: str, source_path: str, output_dir: str,
          start_frame: int = 1, end_frame: int = 240,
-         dt: float = 1/24):
+         dt: float = 1/24, mode: str = 'ply'):
     """
     Sample and advect particles through voxel velocity fields,
-    sourcing new particles each frame from a source JSON.
+    sourcing new particles each frame from a source JSON,
+    and save output in PLY and/or JSON based on mode.
 
     Args:
         voxel_dir: Directory with velVolume_XXXX.json files.
         source_path: Path to smoke_source.json file.
-        output_dir: Directory to save PLY outputs.
+        output_dir: Directory to save outputs.
         start_frame: First frame index.
         end_frame: Last frame index.
         dt: Time step interval between frames.
+        mode: 'ply', 'json', or 'both'.
     """
-    print(f"Starting smoke simulation: frames {start_frame} to {end_frame}")
+    print(f"Starting smoke simulation: frames {start_frame} to {end_frame}, mode={mode}")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     os.makedirs(output_dir, exist_ok=True)
 
@@ -126,14 +140,21 @@ def main(voxel_dir: str, source_path: str, output_dir: str,
 
         if frame == start_frame:
             particles = load_source_points(source_path, device)
-            write_ply(os.path.join(output_dir, 'sample_init.ply'), particles)
+            if mode in ('ply', 'both'):
+                write_ply(os.path.join(output_dir, 'sample_init.ply'), particles)
+            if mode in ('json', 'both'):
+                write_particles_json(os.path.join(output_dir, f'particles_frame_{frame:04d}.json'), particles)
         else:
             print(f"Frame {frame}: updating and sourcing new particles")
             particles = update_particles(particles, grid, origin,
                                          voxel_size, resolution, dt)
             new_pts = load_source_points(source_path, device)
             particles = torch.cat([particles, new_pts], dim=0)
-            write_ply(os.path.join(output_dir, f'sample_{frame:04d}.ply'), particles)
+
+            if mode in ('ply', 'both'):
+                write_ply(os.path.join(output_dir, f'sample_{frame:04d}.ply'), particles)
+            if mode in ('json', 'both'):
+                write_particles_json(os.path.join(output_dir, f'particles_frame_{frame:04d}.json'), particles)
 
     print("Smoke simulation completed.")
 
@@ -150,10 +171,12 @@ if __name__ == '__main__':
     parser.add_argument('--end', type=int, default=240,
                         help='End frame index')
     parser.add_argument('--out_dir', type=str, required=True,
-                        help='Directory to save output PLY files')
+                        help='Directory to save output files')
     parser.add_argument('--dt', type=float, default=1/24,
                         help='Time step interval between frames')
+    parser.add_argument('--mode', type=str, choices=['ply', 'json', 'both'],
+                        default='ply', help="Output mode: 'ply', 'json', or 'both'")
     args = parser.parse_args()
 
     main(args.voxel_dir, args.source, args.out_dir,
-         args.start, args.end, args.dt)
+         args.start, args.end, args.dt, args.mode)
