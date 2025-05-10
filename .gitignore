@@ -2,9 +2,7 @@
 poses/__pycache__/colmap_read_model.cpython-37.pyc
 poses/__pycache__/__init__.cpython-37.pyc
 poses/__pycache__/*.pyc
-__pycache__/*
-__pycache__/*
-poses/__pycache__/*.pyc
+**/__pycache__/*
 
 
 
@@ -37,5 +35,5 @@ thirdparty/gaussian_splatting/submodules/simple-knn/*egg-info
 generatecode.py
 getconfig.py
 test.sh
-*.sh
+##*.sh
 log/*
