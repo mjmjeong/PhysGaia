@@ -158,7 +158,7 @@ def read_timeline(path):
 
     return timestamp_mapper, max_time_float
 
-def readPhysTrackCamerasFromTransforms(path, transformsfile, white_background, extension, mapper):
+def readCustomCamerasFromTransforms(path, transformsfile, white_background, extension, mapper):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -247,64 +247,95 @@ def validate_json_file(file_path):
             else:
                 return False, f"JSON Error in {file_path}: {str(e)}"
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000):
-    timestamp_mapper, max_time = read_timeline(path)
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, num_views="single", max_point_per_obj=5000):
     print("Reading Training Transforms")
-    train_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, mapper=timestamp_mapper)
+    timestamp_mapper, max_time = read_timeline(path)
+    if num_views == "single":
+        train_cam_infos = readCustomCamerasFromTransforms(
+            path, "camera_info_train_mono.json", white_background, extension, mapper=timestamp_mapper)
+    elif num_views == "double":
+        train_cam_infos = readCustomCamerasFromTransforms(
+            path, "camera_info_train.json", white_background, extension, mapper=timestamp_mapper)
+    else:
+        raise ValueError(f"Invalid number of views: {num_views}")
+        
     print("Reading Test Transforms")
-    test_cam_infos = readPhysTrackCamerasFromTransforms(path, "camera_info_test.json", white_background, extension, mapper=timestamp_mapper)
+    test_cam_infos = readCustomCamerasFromTransforms(
+        path, "camera_info_test.json", white_background, extension, mapper=timestamp_mapper)
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
-    if init_with_traj: # Traj's first frame
-        print("Initializing with trajectory")
-        ply_path = os.path.join(path, "traj_0_grid4d.ply")
+    if init_with_traj:
+        
+        print(f"Initializing with traj")
+        ply_path = os.path.join(path, "traj_0_grid4D.ply")
         if not os.path.exists(ply_path):
-            particle_path = os.path.join(path, "particles")
-            all_xyz = []
-            for dirname in os.listdir(particle_path):
-                dir_path = os.path.join(particle_path, dirname)
-                if not os.path.isdir(dir_path):
-                    continue
-                json_path = os.path.join(dir_path, f"particles_frame_{init_frame_index:04d}.json")
-                
-                # Validate JSON before loading
-                is_valid, error_msg = validate_json_file(json_path)
-                if not is_valid:
-                    print(f"Error in JSON file {json_path}:")
-                    print(error_msg)
-                    print("exiting")
-                    exit()
-                
-                try:
-                    with open(json_path) as json_file:
-                        trajs = json.load(json_file)
-                    xyz = np.stack([traj['position'] for traj in trajs], 0)
-                    xyz = xyz[np.random.choice(xyz.shape[0], size=min(max_point_per_obj, xyz.shape[0]), replace=False)]
-                    all_xyz.append(xyz)
-                except Exception as e:
-                    print(f"Error processing {json_path}: {str(e)}")
-                    continue
-                    
-            if not all_xyz:
-                raise RuntimeError("No valid trajectory data found. Please check your JSON files.")
-                
-            merged_xyz = np.concatenate(all_xyz, axis=0)
-            num_pts = merged_xyz.shape[0]
-            shs = np.random.random((num_pts, 3)) / 255.0
-            pcd = BasicPointCloud(points=merged_xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
-            storePly(ply_path, merged_xyz, SH2RGB(shs) * 255)
-        else:
-            pcd = fetchPly(ply_path)
+            xyz = []
 
-    else: # COLMAP init
-        ply_path = os.path.join(path, "colmap/dense/0/fused.ply")
-        if not os.path.exists(ply_path):        
-            # TODO: xyz from colmap, others random/zero
-            raise NotImplementedError("Colmap random init not implemented yet")
-            storePly(ply_path, xyzt, SH2RGB(shs) * 255)
+            particles_path = os.path.join(path, "particles")
+            # for directory in particles_path, find all particles_frame_{init_frame_index:04d}.json
+            for directory in os.listdir(particles_path):
+                if os.path.isdir(os.path.join(particles_path, directory)):
+                    # num_files
+                    num_files = len(os.listdir(os.path.join(particles_path, directory)))
+                    point_per_frame = max_point_per_obj // num_files
+                    for i in range(num_files):
+                        json_path = os.path.join(particles_path, directory, f"particles_frame_{i+1:04d}.json")
+                        with open(json_path) as json_file:
+                            trajs = json.load(json_file)
+                            xyz_object = np.stack([traj['position'] for traj in trajs], 0)
+                            xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(point_per_frame, xyz_object.shape[0]), replace=False)]
+                            xyz.append(xyz_object)
+            xyz = np.concatenate(xyz, axis=0)
+            num_pts = xyz.shape[0]
+            shs = np.random.random((num_pts, 3)) / 255.0
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))    
+            storePly(ply_path, xyz, SH2RGB(shs) * 255)
+    
+    else: 
+        # COLMAP init
+
+        # Folder layout:  
+        # ├── database.db  
+        # ├── sparse/0/      ← raw sparse model (full-res, distorted)  
+        # └── dense/0/       ← dense workspace (undistorted, resized images)  
+
+        # 3D point cloud:  
+        # dense/0/fused.ply         ← dense fused cloud  
+        # dense/0/meshed-poisson.ply ← watertight mesh  
+
+        # Camera params:  
+        # sparse: sparse/0/cameras.bin & sparse/0/images.bin  
+        # dense:  dense/0/sparse/cameras.bin & dense/0/sparse/images.bin  
+
+        # Key diff:  
+        # sparse uses original pixel grid + distortion coefficients;  
+        # dense zeroes distortion & adjusts focal/center for undistorted image grid.
+        # dense directory also has "undistorted" images in dense/0/images
+        # CHECK: workspace or 0?
+        if num_views == "single":
+            ply_path = os.path.join(path, "colmap_single/dense/0/fused.ply")
+        elif num_views == "double":
+            ply_path = os.path.join(path, "colmap/dense/0/fused.ply")
         else:
-            pcd = fetchPly(ply_path)
+            raise ValueError(f"Invalid number of views: {num_views}")
+        
+        if not os.path.exists(ply_path):
+            raise NotImplementedError("Random init is not implemented for PhysTrack. Run COLMAP first.")
+        
+            # TODO: xyz from colmap, others random/zero
+            num_pts = 100_000
+            print(f"Generating random point cloud ({num_pts})...")
+
+            xyz = np.random.random((num_pts, 3)) * 2.6 - 1.3
+            shs = np.random.random((num_pts, 3)) / 255.0
+            pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+            storePly(ply_path, xyz, SH2RGB(shs) * 255)
+
+    try:
+        pcd = fetchPly(ply_path)
+    except:
+        pcd = None
             
     scene_info = SceneInfo(point_cloud=pcd,
                            train_cameras=train_cam_infos,
