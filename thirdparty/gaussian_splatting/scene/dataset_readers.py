@@ -1157,7 +1157,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
     if num_views == "single":
         train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train_mono.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
     elif num_views == "double":
-        train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train_stereo.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+        train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
     else:
         raise ValueError(f"Invalid number of views: {num_views}")
     print("Reading Test Transforms")
