@@ -1,5 +1,5 @@
 {
-  "resolution": 2,
+  "resolution": 1,
   "model": "ours_full",
   "scaling_lr": 0.0015,
   "preprocesspoints":3, 
