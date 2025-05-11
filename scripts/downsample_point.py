@@ -7,7 +7,7 @@ def process_ply_file(input_file, output_file):
 
     # 通过点云下采样将输入的点云减少
     voxel_size=0.02
-    while len(pcd.points) > 40000:
+    while len(pcd.points) > 20000:
         pcd = pcd.voxel_down_sample(voxel_size=voxel_size)
         print(f"Downsampled points: {len(pcd.points)}")
         voxel_size+=0.01

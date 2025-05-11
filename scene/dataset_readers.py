@@ -542,9 +542,9 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
 
         # CHECK: camera parameter은 COLMAP estimation을 사용하지 않고 주어진 것으로 합니꽈?
         if num_views == "single":
-            ply_path = os.path.join(path, "colmap_single/dense/0/fused.ply")
+            ply_path = os.path.join(path, "colmap_single/dense/0/fused_downsampled.ply")
         elif num_views == "double":
-            ply_path = os.path.join(path, "colmap_double/dense/0/fused.ply")
+            ply_path = os.path.join(path, "colmap_double/dense/0/fused_downsampled.ply")
         else:
             raise ValueError(f"Invalid number of views: {num_views}")
         
