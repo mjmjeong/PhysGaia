@@ -50,7 +50,7 @@ source_paths = [
     "/131_data/intern/gunhee/PhysTrack/New/Pyro/simple_smoke",
     "/131_data/intern/gunhee/PhysTrack/New/Pyro/pisa",
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/hanok",
-    "/131_data/intern/gunhee/PhysTrack/New/FLIP/fountain",
+    "/131_data/intern/gunhee/PhysTrack/New/FLIP/filling_cup",
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/ship",
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/torus_falling_into_water",
     "/131_data/intern/gunhee/PhysTrack/New/Vellum/box_falling_into_cloth",
