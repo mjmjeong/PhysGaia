@@ -10,4 +10,4 @@ data/
 data
 submodules/
 *.png
-experiment_logs/
+experiment_logs*/

@@ -18,7 +18,7 @@ parser.add_argument('--log_dir', type=str, default='experiment_logs', help='Dire
 args = parser.parse_args()
 
 # Base output directory for experiments
-output_base = "/131_data/wonjae/phystrack/outputs"
+output_base = "/131_data/wonjae/phystrack/outputs_4DGS"
 
 # Create log directory if it doesn't exist
 os.makedirs(args.log_dir, exist_ok=True)
@@ -41,23 +41,23 @@ logger = logging.getLogger(__name__)
 
 # These lists will be manually set later - using placeholders for now
 source_paths = [
-    #"/131_data/intern/gunhee/PhysTrack/New/MPM/bouncing_balls", #(done)
-    #"/131_data/intern/gunhee/PhysTrack/New/MPM/falling_jelly", #(render not ready)
-    #"/131_data/intern/gunhee/PhysTrack/New/MPM/cow", #(done)
-    #"/131_data/intern/gunhee/PhysTrack/New/MPM/pancake", #(done)
+    # "/131_data/intern/gunhee/PhysTrack/New/MPM/bouncing_balls", # done (5/11)
+    "/131_data/intern/gunhee/PhysTrack/New/MPM/falling_jelly", # render ready by 5/11
+    # "/131_data/intern/gunhee/PhysTrack/New/MPM/cow", # done (5/11)
+    #"/131_data/intern/gunhee/PhysTrack/New/MPM/pancake", # done (5/11)
     #"/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_box", #(particles not ready)
-    #"/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_fall",  #(particles not ready)
-    #"/131_data/intern/gunhee/PhysTrack/New/Pyro/simple_smoke", #(particles not ready)
+    "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_fall",   # particles ready by 5/11
+    "/131_data/intern/gunhee/PhysTrack/New/Pyro/simple_smoke", # particles ready by 5/11
     #"/131_data/intern/gunhee/PhysTrack/New/Pyro/pisa", #(particles not ready)
-    # "/131_data/intern/gunhee/PhysTrack/New/FLIP/hanok",  #(done) #(fixing material)
-    #"/131_data/intern/gunhee/PhysTrack/New/FLIP/fountain", #(render not ready)
-    #"/131_data/intern/gunhee/PhysTrack/New/FLIP/ship", #(fixing material)  #(NaN)
-    "/131_data/intern/gunhee/PhysTrack/New/FLIP/torus_falling_into_water",  #(NaN)
-    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/box_falling_into_cloth",  #(done)
-    "/131_data/intern/gunhee/PhysTrack/New/Vellum/flags", #(NaN)
-    "/131_data/intern/gunhee/PhysTrack/New/Vellum/pinned_flag",  #(NaN)
-    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/tube_flag",  #(done)
-    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/cloth_falling_onto_statue", #(particle not ready)
+    "/131_data/intern/gunhee/PhysTrack/New/FLIP/hanok",  # fixed material by 5/11
+    #"/131_data/intern/gunhee/PhysTrack/New/FLIP/filling_cup", #(render not ready)
+    "/131_data/intern/gunhee/PhysTrack/New/FLIP/ship", # fixed material by 5/11
+    #"/131_data/intern/gunhee/PhysTrack/New/FLIP/torus_falling_into_water",  #done (5/11)
+    #"/131_data/intern/gunhee/PhysTrack/New/Vellum/box_falling_into_cloth",  #done (5/11)
+    #"/131_data/intern/gunhee/PhysTrack/New/Vellum/flags",  #done (5/11)
+    #"/131_data/intern/gunhee/PhysTrack/New/Vellum/pinned_flag",   #done (5/11)
+    #"/131_data/intern/gunhee/PhysTrack/New/Vellum/tube_flag", #done (5/11)
+    #"/131_data/intern/gunhee/PhysTrack/New/Vellum/cloth_falling_onto_statue",  #done (5/11)
 ]
 
 # Init options - these will be passed as flags to train.py
@@ -76,7 +76,7 @@ num_views = [
 
 # Additional arguments that might vary
 additional_args = [
-    "--configs", " arguments/hypernerf/default.py",
+    "--configs", "arguments/hypernerf/default.py",
     "--eval",
     "--grid_lr_init", "0.000016",
     "--grid_lr_final", "0.0000016"
@@ -130,8 +130,8 @@ for i, (source_path, init_option, num_view) in enumerate(all_experiments):
     # Create a descriptive experiment name
     dataset_name = Path(source_path).name
     init_name = init_option["name"]
-    
-    expname = f"{dataset_name}_{init_name}_{num_view}"
+    dataset_category = Path(source_path).parent.name
+    expname = f"{dataset_category}_{dataset_name}_{init_name}_{num_view}"
     save_path = os.path.join(output_base, expname)
     
     # Create output directory for logs specific to this experiment
