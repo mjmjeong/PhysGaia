@@ -1183,6 +1183,9 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
                         json_path = os.path.join(particles_path, directory, f"particles_frame_{i+1:04d}.json")
                         with open(json_path) as json_file:
                             trajs = json.load(json_file)
+                            # if trajs is empty, continue
+                            if len(trajs) == 0:
+                                continue
                             xyz_object = np.stack([traj['position'] for traj in trajs], 0)
                             xyz_object = xyz_object[np.random.choice(xyz_object.shape[0], size=min(point_per_frame, xyz_object.shape[0]), replace=False)]
                             xyz.append(xyz_object)
