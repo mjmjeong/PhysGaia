@@ -6,6 +6,7 @@ pip install thirdparty/gaussian_splatting/submodules/simple-knn
 pip install natsort
 pip uninstall -y mmcv
 pip install mmcv-full
+pip install requests
 
 pip install kornia
 pip install seaborn

@@ -241,3 +241,23 @@ if failure_count > 0:
         logger.info(f"{i+1}. {exp['experiment']} (index {exp['index']})")
         logger.info(f"   Command: {exp['command']}")
         logger.info(f"   Error: {exp['error']}")
+
+def notify_slack(message):
+    import requests
+
+    # Slack webhook URL
+    webhook_url = "https://hooks.slack.com/services/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"
+
+    try:
+        payload = {
+            "text": f"PhysTrack: {message}."
+        }
+        response = requests.post(webhook_url, json=payload)
+        if response.status_code != 200:
+            logger.info(f"Failed to send Slack notification: {response.text}")
+    except Exception as e:
+        logger.info(f"Error sending Slack notification: {str(e)}")
+
+
+notify_slack(f"Experiment completed. Saved results to {output_base}")
+
