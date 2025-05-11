@@ -518,9 +518,9 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
         # dense directory also has "undistorted" images in dense/0/images
         # CHECK: workspace or 0?
         if num_views == "single":
-            ply_path = os.path.join(path, "colmap_single/dense/0/fused.ply")
+            ply_path = os.path.join(path, "colmap_single/dense/0/fused_downsampled.ply")
         elif num_views == "double":
-            ply_path = os.path.join(path, "colmap_double/dense/0/fused.ply")
+            ply_path = os.path.join(path, "colmap_double/dense/0/fused_downsampled.ply")
         else:
             raise ValueError(f"Invalid number of views: {num_views}")
         
