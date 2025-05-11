@@ -10,3 +10,4 @@ screenshots
 **/__pycache__/
 experiment_logs/
 submodules/
+submodules/simple-knn
