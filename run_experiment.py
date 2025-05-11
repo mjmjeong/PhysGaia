@@ -9,7 +9,7 @@ import sys
 import json
 from pathlib import Path
 
-DEBUG_ENUMERATION = True
+DEBUG_ENUMERATION = False
 
 # Set up argument parser for resuming
 parser = argparse.ArgumentParser(description='Run multiple PhysTrack training experiments')
@@ -18,7 +18,7 @@ parser.add_argument('--log_dir', type=str, default='experiment_logs', help='Dire
 args = parser.parse_args()
 
 # Base output directory for experiments
-output_base = "/131_data/wonjae/phystrack/outputs"
+output_base = "/131_data/wonjae/phystrack/outputs_deformable"
 
 # Create log directory if it doesn't exist
 os.makedirs(args.log_dir, exist_ok=True)
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 # These lists will be manually set later - using placeholders for now
 source_paths = [
     "/131_data/intern/gunhee/PhysTrack/New/MPM/bouncing_balls",
-    "/131_data/intern/gunhee/PhysTrack/New/MPM/falling_jelly",
+    #"/131_data/intern/gunhee/PhysTrack/New/MPM/falling_jelly",
     "/131_data/intern/gunhee/PhysTrack/New/MPM/cow",
     "/131_data/intern/gunhee/PhysTrack/New/MPM/pancake",
     "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_box",
@@ -50,7 +50,7 @@ source_paths = [
     "/131_data/intern/gunhee/PhysTrack/New/Pyro/simple_smoke",
     "/131_data/intern/gunhee/PhysTrack/New/Pyro/pisa",
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/hanok",
-    "/131_data/intern/gunhee/PhysTrack/New/FLIP/fountain",
+    #"/131_data/intern/gunhee/PhysTrack/New/FLIP/fountain",
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/ship",
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/torus_falling_into_water",
     "/131_data/intern/gunhee/PhysTrack/New/Vellum/box_falling_into_cloth",
@@ -65,7 +65,7 @@ source_paths = [
 # we will use a dictionary to represent different initialization modes
 init_options = [
     {"name": "traj", "args": ["--init_with_traj"]},
-    {"name": "colmap", "args": []}  # No special initialization flag
+    #{"name": "colmap", "args": []}  # No special initialization flag
 ]
 
 # Single/double model options

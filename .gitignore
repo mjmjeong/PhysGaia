@@ -8,3 +8,5 @@ tensorboard_3d
 screenshots
 .idea
 **/__pycache__/
+experiment_logs/
+submodules/
