@@ -520,7 +520,7 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
         if num_views == "single":
             ply_path = os.path.join(path, "colmap_single/dense/0/fused.ply")
         elif num_views == "double":
-            ply_path = os.path.join(path, "colmap/dense/0/fused.ply")
+            ply_path = os.path.join(path, "colmap_double/dense/0/fused.ply")
         else:
             raise ValueError(f"Invalid number of views: {num_views}")
         

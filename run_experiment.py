@@ -100,7 +100,9 @@ if args.resume_from > 0:
             source_path, init_option, num_view = all_experiments[i]
             dataset_name = Path(source_path).name
             init_name = init_option["name"]
-            expname = f"{dataset_name}_{init_name}_{num_view}"
+            
+            dataset_category = Path(source_path).parent.name
+            expname = f"{dataset_category}_{dataset_name}_{init_name}_{num_view}"   
             
             # Build command for logging
             cmd_parts = ["python train.py", 
@@ -128,7 +130,8 @@ for i, (source_path, init_option, num_view) in enumerate(all_experiments):
     dataset_name = Path(source_path).name
     init_name = init_option["name"]
     
-    expname = f"{dataset_name}_{init_name}_{num_view}"
+    dataset_category = Path(source_path).parent.name
+    expname = f"{dataset_category}_{dataset_name}_{init_name}_{num_view}"
     save_path = os.path.join(output_base, expname)
     
     # Create output directory for logs specific to this experiment
