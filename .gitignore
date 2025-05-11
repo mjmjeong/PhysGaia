@@ -37,3 +37,4 @@ getconfig.py
 test.sh
 ##*.sh
 log/*
+experiment_logs*/

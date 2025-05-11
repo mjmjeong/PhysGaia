@@ -9,7 +9,7 @@ import sys
 import json
 from pathlib import Path
 
-DEBUG_ENUMERATION = True
+DEBUG_ENUMERATION = False
 
 # Set up argument parser for resuming
 parser = argparse.ArgumentParser(description='Run multiple PhysTrack training experiments')
@@ -18,7 +18,7 @@ parser.add_argument('--log_dir', type=str, default='experiment_logs', help='Dire
 args = parser.parse_args()
 
 # Base output directory for experiments
-output_base = "/131_data/wonjae/phystrack/outputs"
+output_base = "/131_data/wonjae/phystrack/outputs_spacetime"
 
 # Create log directory if it doesn't exist
 os.makedirs(args.log_dir, exist_ok=True)
@@ -45,12 +45,12 @@ source_paths = [
     "/131_data/intern/gunhee/PhysTrack/New/MPM/falling_jelly",
     "/131_data/intern/gunhee/PhysTrack/New/MPM/cow",
     "/131_data/intern/gunhee/PhysTrack/New/MPM/pancake",
-    "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_box",
+    # "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_box", # render not ready by 5/11
     "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_fall",
     "/131_data/intern/gunhee/PhysTrack/New/Pyro/simple_smoke",
-    "/131_data/intern/gunhee/PhysTrack/New/Pyro/pisa",
+    # "/131_data/intern/gunhee/PhysTrack/New/Pyro/pisa", # render not ready by 5/11
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/hanok",
-    "/131_data/intern/gunhee/PhysTrack/New/FLIP/filling_cup",
+    # "/131_data/intern/gunhee/PhysTrack/New/FLIP/filling_cup", # render not ready by 5/11
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/ship",
     "/131_data/intern/gunhee/PhysTrack/New/FLIP/torus_falling_into_water",
     "/131_data/intern/gunhee/PhysTrack/New/Vellum/box_falling_into_cloth",
@@ -65,7 +65,7 @@ source_paths = [
 # we will use a dictionary to represent different initialization modes
 init_options = [
     {"name": "traj", "args": ["--init_with_traj"]},
-    {"name": "colmap", "args": []}  # No special initialization flag
+    #{"name": "colmap", "args": []}  # No special initialization flag
 ]
 
 # Single/double model options
@@ -76,7 +76,7 @@ num_views = [
 
 # Additional arguments that might vary
 additional_args = [
-    "--config configs/base_phystrack_full.json",
+    "--config", "configs/base_phystrack_full.json",
     "--eval",
 ]
 
@@ -100,7 +100,9 @@ if args.resume_from > 0:
             source_path, init_option, num_view = all_experiments[i]
             dataset_name = Path(source_path).name
             init_name = init_option["name"]
-            expname = f"{dataset_name}_{init_name}_{num_view}"
+            
+            dataset_category = Path(source_path).parent.name
+            expname = f"{dataset_category}_{dataset_name}_{init_name}_{num_view}"
             
             # Build command for logging
             cmd_parts = ["python train.py", 
@@ -128,7 +130,8 @@ for i, (source_path, init_option, num_view) in enumerate(all_experiments):
     dataset_name = Path(source_path).name
     init_name = init_option["name"]
     
-    expname = f"{dataset_name}_{init_name}_{num_view}"
+    dataset_category = Path(source_path).parent.name
+    expname = f"{dataset_category}_{dataset_name}_{init_name}_{num_view}"
     save_path = os.path.join(output_base, expname)
     
     # Create output directory for logs specific to this experiment
