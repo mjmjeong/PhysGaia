@@ -36,18 +36,27 @@ def write_particles_json(filename: str, points: torch.Tensor):
 def load_velocity_field(path: str, device: torch.device):
     """
     Load a JSON velocity field and metadata, vectorizing the inner loop.
+    If no voxels are stored (i.e. all-zero frame), returns a zero grid.
     """
     print(f"Loading velocity field: {path}")
     with open(path, 'rb') as f:
         data = json.loads(f.read())
-    resolution = tuple(data['grid_info']['resolution'])
+
+    resolution = tuple(data['grid_info']['resolution'])  
     voxel_size = torch.tensor(data['grid_info']['voxelSize'], device=device)
-    voxels = data['voxels']
-    idxs = np.array([[v['i'], v['j'], v['k']] for v in voxels], dtype=np.int64)
-    vels = np.array([v['vel'] for v in voxels], dtype=np.float32)
+    origin     = torch.tensor(data['grid_info']['origin'],    
+                             dtype=torch.float32, device=device)
+
     grid = torch.zeros((*resolution, 3), dtype=torch.float32, device=device)
-    grid[idxs[:,0], idxs[:,1], idxs[:,2]] = torch.from_numpy(vels).to(device)
-    origin = torch.tensor(voxels[0]['world_pos'], dtype=torch.float32, device=device)
+
+    voxels = data.get('voxels', [])
+    if voxels:
+        idxs = np.array([[v['i'], v['j'], v['k']] for v in voxels],
+                        dtype=np.int64).reshape(-1, 3)
+        vels = np.array([v['vel'] for v in voxels], dtype=np.float32)
+
+        grid[idxs[:,0], idxs[:,1], idxs[:,2]] = torch.from_numpy(vels).to(device)
+
     return grid, origin, voxel_size, resolution
 
 
