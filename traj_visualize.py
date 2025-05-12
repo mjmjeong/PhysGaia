@@ -211,14 +211,15 @@ def main():
             print(f'Processed {i}/{len(frames)} frames')
 
     # --- Draw trajectories with OpenCV ---
-    output = np.zeros((h, w, 3), dtype=np.uint8)
+    # = np.zeros((h, w, 3), dtype=np.uint8)
+    output = np.full((h, w, 3), 255, dtype=np.uint8)
     for pid, traj in trajectories.items():
         color = tuple(map(int, np.random.randint(0, 255, 3)))
         prev_pt = None
         for pt in traj:
             if pt is not None:
                 if prev_pt is not None:
-                    cv2.line(output, prev_pt, pt, color, 1)
+                    cv2.line(output, prev_pt, pt, color, 2)
                 prev_pt = (int(pt[0]), int(pt[1]))
             else:
                 prev_pt = None
