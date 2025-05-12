@@ -49,8 +49,8 @@ try:
     image_size = meta['w'], meta['h']
     focal = [meta['fl_x'],meta['fl_y']]
 except:
-    try:
-        image_size = meta['frames'][0]['w'], meta['frames'][0]['h']
+    try: 
+#        ames'][0]['h']
         focal = [meta['frames'][0]['fl_x'],meta['frames'][0]['fl_y']]
     except:
         # MODIFIED: image size hardcoded to 640x720 
@@ -73,11 +73,30 @@ for frame in meta['frames']:
     cnt+=1
     if cnt %  sizes != 0:
         continue
-    matrix = np.linalg.inv(np.array(frame["transform_matrix"]))
-    R = -np.transpose(matrix[:3,:3])
-    R[:,0] = -R[:,0]
-    T = -matrix[:3, 3]
-    T = -np.matmul(R,T)
+
+    # modified version
+    c2w = np.array(frame["transform_matrix"])
+            # change from OpenGL/Blender camera axes (Y up, Z back) to COLMAP (Y down, Z forward)
+    c2w[:3, 1:3] *= -1
+
+    # get the world-to-camera transform and set R, T
+    w2c = np.linalg.inv(c2w)
+    R = np.transpose(w2c[:3,:3])  # R is stored transposed due to 'glm' in CUDA code
+    T = w2c[:3, 3]
+
+    matrix2 = np.linalg.inv(np.array(frame["transform_matrix"]))
+    R2 = -np.transpose(matrix2[:3,:3])
+    R2[:,0] = -R2[:,0]
+    T2 = -matrix2[:3, 3]
+    T2 = -np.matmul(R2,T2)
+    
+    pose3 = np.array(frame["transform_matrix"])
+    R3 = pose3[:3,:3]
+    R3 = - R3
+    R3[:,0] = -R3[:,0] 
+    T3 = -pose3[:3,3].dot(R3)
+
+    
     T = [str(i) for i in T]
     qevc = [str(i) for i in rotmat2qvec(np.transpose(R))]
     print(idx+1," ".join(qevc)," ".join(T),1,frame['file_path'].split('/')[-1]+".png","\n",file=object_images_file)
