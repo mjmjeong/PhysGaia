@@ -34,7 +34,7 @@ import numpy as np
 import torch.nn.functional as F
 import cv2
 from tqdm import tqdm
-
+import copy
 
 sys.path.append("./thirdparty/gaussian_splatting")
 
@@ -106,10 +106,10 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
     if opt.batch >= 1:
         traincameralist = scene.getTrainCameras().copy()
         traincamdict = {}
- #       train_cam_dict_name = {}
+        train_cam_dict_name = {}
         for i, cam_data in enumerate(traincameralist):
             traincamdict[i] = [cam_data]
-#            train_cam_dict_name[cam_data.image_name] = cam_data
+            train_cam_dict_name[cam_data.image_name] = cam_data
         #[cam for cam in traincameralist] # TODO
 #        for i in range(duration): # 0 to 4, -> (0.0, to 0.8)
 #            traincamdict[i] = [cam for cam in traincameralist if cam.timestamp == i/duration]
@@ -132,8 +132,8 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
     emsstartfromiterations = opt.emsstart   
 
     with torch.no_grad():
-        timeindex = 0 # 0 to 49
-        viewpointset = traincamdict[timeindex]
+        #timeindex = 0 # 0 to 49
+        viewpointset = copy.deepcopy(traincameralist)
         for viewpoint_cam in viewpointset:
             render_pkg = render(viewpoint_cam, gaussians, pipe, background,  override_color=None,  basicfunction=rbfbasefunction, GRsetting=GRsetting, GRzer=GRzer)
             
@@ -146,17 +146,18 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
             
             depth = render_pkg["depth"]
             slectemask = depth != 15.0 
-
             validdepthdict[viewpoint_cam.image_name] = torch.median(depth[slectemask]).item()   
             depthdict[viewpoint_cam.image_name] = torch.amax(depth[slectemask]).item() 
-    
-    if densify == 1 or  densify == 2: 
-        zmask = gaussians._xyz[:,2] < 4.5  
-        gaussians.prune_points(zmask) 
-        torch.cuda.empty_cache()
+#            validdepthdict[viewpoint_cam.image_name] = torch.median(depth).item()   
+#            depthdict[viewpoint_cam.image_name] = torch.amax(depth).item() 
+               
+#    if densify == 1 or  densify == 2: 
+#        zmask = gaussians._xyz[:,2] < 4.5  
+#        gaussians.prune_points(zmask) 
+#        torch.cuda.empty_cache()
 
 
-    selectedlength = 2
+    selectedlength = 10
     lasterems = 0 
     gtisint8 = getgtisint8()
 
@@ -226,10 +227,9 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
                 if len(selectviewslist) < 2 :
                     selectviews = []
                 else:
-                    selectviewslist = selectviewslist[:2]
+                    selectviewslist = selectviewslist[:opt.num_ems]
                     for v in selectviewslist:
                         selectviews[v[0]] = v[1]
-
                 selectedlength = len(selectviews)
 
             iter_end.record()

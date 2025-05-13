@@ -1,12 +1,19 @@
 {
   "resolution": 1,
   "model": "ours_full",
-  "scaling_lr": 0.0015,
-  "preprocesspoints":3, 
+  "scaling_lr": 0.003,
+  "preprocesspoints":0, 
   "test_iteration": 25000,
   "duration": 50,
   "rdpip": "train_ours_full",
   "rgbfunction": "sandwich",
   "gtmask": 0,
-  "densify": 3
+  "densify": 4,
+  "densification_interval": 100,
+  "batch": 2,
+  "densify_until_iter": 20000,
+  "iterations": 30000,
+  "num_ems": 10,
+  "desicnt": 10,
+  "densi_sizeth": 5
 }

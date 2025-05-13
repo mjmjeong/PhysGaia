@@ -116,13 +116,15 @@ class OptimizationParams(ParamGroup):
         self.densify_from_iter = 500
         self.densify_until_iter = 9000
         self.densify_grad_threshold = 0.0002
+#        self.pruning_from_iter = 500
+#        self.pruning_interval = 100
+#        self.max_gaussian_num = 360_000
         self.rgb_lr = 0.0001
         self.desicnt = 6
         self.reg = 0 
         self.regl = 0.0001 
         self.shrinkscale = 2.0 
         self.randomfeature = 0 
-        self.emstype = 0
         self.radials = 10.0
         self.farray = 2 # 
         self.emsstart = 1600 #small for debug
@@ -130,6 +132,8 @@ class OptimizationParams(ParamGroup):
         self.saveemppoints = 0 #
         self.prunebysize = 0 
         self.emsthr = 0.6  
+        self.num_ems = 2
+        self.densi_sizeth = 20
         self.opthr = 0.005
         self.selectiveview = 0  
         self.preprocesspoints = 0  

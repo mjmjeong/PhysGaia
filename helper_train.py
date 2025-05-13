@@ -282,6 +282,28 @@ def controlgaussians(opt, gaussians, densify, iteration, scene,  visibility_filt
                 removeminmax(gaussians, maxbounds, minbounds)
         return flag
     
+    elif densify == 4: # phystrack
+        if iteration < opt.densify_until_iter :
+            gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+            gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
+
+            if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
+                if flag < opt.desicnt:
+                    scene.recordpoints(iteration, "before densify")
+                    size_threshold = opt.densi_sizeth if iteration > opt.opacity_reset_interval else None
+                    gaussians.densify_pruneclone(opt.densify_grad_threshold, opt.opthr, scene.cameras_extent, size_threshold)
+                    flag+=1
+                    scene.recordpoints(iteration, "after densify")
+                else:
+                    if iteration < 15000 : # defalt 7000. 
+                        prune_mask =  (gaussians.get_opacity < opt.opthr).squeeze()
+                        gaussians.prune_points(prune_mask)
+                        torch.cuda.empty_cache()
+                        scene.recordpoints(iteration, "addionally prune_mask")
+            if iteration % opt.opacity_reset_interval == 0 :
+                gaussians.reset_opacity()
+        return flag
+
 
 def logicalorlist(listoftensor):
     mask = None 
