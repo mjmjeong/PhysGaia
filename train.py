@@ -133,7 +133,9 @@ def train(dataset, opt, pipe, saving_iterations, debug_from, densify=0, duration
 
     with torch.no_grad():
         #timeindex = 0 # 0 to 49
-        viewpointset = copy.deepcopy(traincameralist)
+        #TODO: check if this is fine
+        #viewpointset = copy.deepcopy(traincameralist)
+        viewpointset = traincameralist
         for viewpoint_cam in viewpointset:
             render_pkg = render(viewpoint_cam, gaussians, pipe, background,  override_color=None,  basicfunction=rbfbasefunction, GRsetting=GRsetting, GRzer=GRzer)
             

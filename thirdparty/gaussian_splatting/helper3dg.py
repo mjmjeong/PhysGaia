@@ -58,8 +58,8 @@ def getparser():
         raise ValueError("num_views option is required")
     else:
         num_views = sys.argv[sys.argv.index("--num_views") + 1]
-    if not num_views in ["single", "double"]:
-        raise ValueError("num_views option must be either single or double")
+    if not num_views in ["single", "double", "triple"]:
+        raise ValueError("num_views option must be either single or double or triple")
     
     print("Optimizing " + args.model_path)
     

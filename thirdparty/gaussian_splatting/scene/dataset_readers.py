@@ -578,7 +578,10 @@ def fetchPly_from_xyz(path):
     #import pdb; pdb.set_trace()
     times = np.ones((positions.shape[0], 1))
     colors = np.vstack([vertices['red'], vertices['green'], vertices['blue']]).T / 255.0
-    normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
+    if 'nx' in vertices:
+        normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
+    else:
+        normals = np.zeros_like(positions)
     return BasicPointCloud(points=positions, colors=colors, normals=normals, times=times)
 
 def storePly(path, xyzt, rgb):
@@ -1151,13 +1154,15 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
                            ply_path=ply_path)
     return scene_info
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, keep_rayinfo=True, init_frame_index=1, max_point_per_obj = 5000, num_views="single"):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, keep_rayinfo=True, init_frame_index=1, max_point_per_obj = 5000, num_views="single", init_colmap_sparse = False):
     timestamp_mapper, max_time = read_timeline(path)
     print("Reading Training Transforms")
     if num_views == "single":
         train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train_mono.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
     elif num_views == "double":
         train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
+    elif num_views == "triple":
+        train_cam_infos = readCustomCamerasFromTransforms(path, "camera_info_train_triple.json", white_background, extension, timestamp_mapper, keep_rayinfo=keep_rayinfo)
     else:
         raise ValueError(f"Invalid number of views: {num_views}")
     print("Reading Test Transforms")
@@ -1202,10 +1207,25 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
 
     else: # COLMAP init
         print(f"Initializing with COLMAP")
+        if init_colmap_sparse:
+            print(f"Initializing with COLMAP sparse")
+        else:
+            print(f"Initializing with COLMAP dense")
         if num_views == "single":
-            ply_path = os.path.join(path, "colmap_single/dense/0/fused_downsampled.ply")
+            if not init_colmap_sparse:
+                ply_path = os.path.join(path, "colmap_single/dense/0/fused_downsampled.ply")
+            else:
+                ply_path = os.path.join(path, "colmap_single/sparse/0/points3D.ply")
         elif num_views == "double":
-            ply_path = os.path.join(path, "colmap_double/dense/0/fused_downsampled.ply")
+            if not init_colmap_sparse:
+                ply_path = os.path.join(path, "colmap_double/dense/0/fused_downsampled.ply")
+            else:
+                ply_path = os.path.join(path, "colmap_double/sparse/0/points3D.ply")
+        elif num_views == "triple":
+            if not init_colmap_sparse:
+                ply_path = os.path.join(path, "colmap_triple/dense/0/fused_downsampled.ply")
+            else:
+                ply_path = os.path.join(path, "colmap_triple/sparse/0/points3D.ply")
         else:
             raise ValueError(f"Invalid number of views: {num_views}")
         
