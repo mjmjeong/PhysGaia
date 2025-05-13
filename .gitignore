@@ -38,3 +38,4 @@ test.sh
 ##*.sh
 log/*
 experiment_logs*/
+run_experiment*.py

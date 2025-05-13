@@ -41,23 +41,23 @@ logger = logging.getLogger(__name__)
 
 # These lists will be manually set later - using placeholders for now
 source_paths = [
-    "/131_data/intern/gunhee/PhysTrack/New/MPM/bouncing_balls",
-    "/131_data/intern/gunhee/PhysTrack/New/MPM/falling_jelly",
-    "/131_data/intern/gunhee/PhysTrack/New/MPM/cow",
-    "/131_data/intern/gunhee/PhysTrack/New/MPM/pancake",
-    # "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_box", # render not ready by 5/11
-    "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_fall",
-    "/131_data/intern/gunhee/PhysTrack/New/Pyro/simple_smoke",
-    # "/131_data/intern/gunhee/PhysTrack/New/Pyro/pisa", # render not ready by 5/11
-    "/131_data/intern/gunhee/PhysTrack/New/FLIP/hanok",
-    # "/131_data/intern/gunhee/PhysTrack/New/FLIP/filling_cup", # render not ready by 5/11
-    "/131_data/intern/gunhee/PhysTrack/New/FLIP/ship",
-    "/131_data/intern/gunhee/PhysTrack/New/FLIP/torus_falling_into_water",
-    "/131_data/intern/gunhee/PhysTrack/New/Vellum/box_falling_into_cloth",
-    "/131_data/intern/gunhee/PhysTrack/New/Vellum/flags",
-    "/131_data/intern/gunhee/PhysTrack/New/Vellum/pinned_flag",
-    "/131_data/intern/gunhee/PhysTrack/New/Vellum/tube_flag",
-    "/131_data/intern/gunhee/PhysTrack/New/Vellum/cloth_falling_onto_statue",
+    # "/131_data/intern/gunhee/PhysTrack/New/MPM/bouncing_balls",
+    # "/131_data/intern/gunhee/PhysTrack/New/MPM/falling_jelly",
+    # "/131_data/intern/gunhee/PhysTrack/New/MPM/cow",
+    # "/131_data/intern/gunhee/PhysTrack/New/MPM/pancake",
+    # "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_box",
+    # "/131_data/intern/gunhee/PhysTrack/New/Pyro/smoke_fall",
+    # "/131_data/intern/gunhee/PhysTrack/New/Pyro/simple_smoke",
+    "/131_data/intern/gunhee/PhysTrack/New/Pyro/pisa", 
+    # "/131_data/intern/gunhee/PhysTrack/New/FLIP/hanok",
+    "/131_data/intern/gunhee/PhysTrack/New/FLIP/filling_cup",
+    # "/131_data/intern/gunhee/PhysTrack/New/FLIP/ship",
+    # "/131_data/intern/gunhee/PhysTrack/New/FLIP/torus_falling_into_water",
+    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/box_falling_into_cloth",
+    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/flags",
+    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/pinned_flag",
+    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/tube_flag",
+    # "/131_data/intern/gunhee/PhysTrack/New/Vellum/cloth_falling_onto_statue",
 ]
 
 # Init options - these will be passed as flags to train.py

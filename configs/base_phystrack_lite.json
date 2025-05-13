@@ -6,6 +6,7 @@
   "test_iteration": 25000,
   "duration": 50,
   "rdpip": "train_ours_lite",
+  "densify_grad_threshold": 0.0002,
   "gtmask": 0,
   "densify": 3
 }
