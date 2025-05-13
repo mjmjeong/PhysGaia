@@ -59,6 +59,7 @@ class ModelParams(ParamGroup):
         self.eval = False
         self.load2gpu_on_the_fly = False
         self.init_with_traj=False
+        self.init_colmap_sparse = False
         self.num_views="single"
         self.init_frame_index=1
         self.max_point_per_obj=5000

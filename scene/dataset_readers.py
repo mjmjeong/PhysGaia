@@ -445,7 +445,7 @@ def readStaticPhysTrackInfo(path, white_background, eval, extension=".jpg", init
     return scene_info
 
 
-def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000, num_views="single"):
+def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_traj=False, init_frame_index=1, max_point_per_obj=5000, num_views="single", init_colmap_sparse=False):
     print("Reading Training Transforms")
     if num_views == "single":
         train_cam_infos = readCustomCamerasFromTransforms(
@@ -453,6 +453,9 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
     elif num_views == "double":
         train_cam_infos = readCustomCamerasFromTransforms(
             path, "camera_info_train.json", white_background, extension)
+    elif num_views == "triple":
+        train_cam_infos = readCustomCamerasFromTransforms(
+            path, "camera_info_train_triple.json", white_background, extension)
     else:
         raise ValueError(f"Invalid number of views: {num_views}")
         
@@ -517,10 +520,27 @@ def readPhysTrackInfo(path, white_background, eval, extension=".png", init_with_
         # dense zeroes distortion & adjusts focal/center for undistorted image grid.
         # dense directory also has "undistorted" images in dense/0/images
         # CHECK: workspace or 0?
+        print(f"Initializing with COLMAP")
+        if init_colmap_sparse:
+            print(f"Initializing with COLMAP sparse")
+        else:
+            print(f"Initializing with COLMAP dense")
+        
         if num_views == "single":
-            ply_path = os.path.join(path, "colmap_single/dense/0/fused_downsampled.ply")
+            if not init_colmap_sparse:
+                ply_path = os.path.join(path, "colmap_single/dense/0/fused_downsampled.ply")
+            else:
+                ply_path = os.path.join(path, "colmap_single/sparse/0/points3D.ply")
         elif num_views == "double":
-            ply_path = os.path.join(path, "colmap_double/dense/0/fused_downsampled.ply")
+            if not init_colmap_sparse:
+                ply_path = os.path.join(path, "colmap_double/dense/0/fused_downsampled.ply")
+            else:
+                ply_path = os.path.join(path, "colmap_double/sparse/0/points3D.ply")
+        elif num_views == "triple":
+            if not init_colmap_sparse:
+                ply_path = os.path.join(path, "colmap_triple/dense/0/fused_downsampled.ply")
+            else:
+                ply_path = os.path.join(path, "colmap_triple/sparse/0/points3D.ply")
         else:
             raise ValueError(f"Invalid number of views: {num_views}")
         

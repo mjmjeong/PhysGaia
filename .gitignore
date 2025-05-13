@@ -8,6 +8,8 @@ tensorboard_3d
 screenshots
 .idea
 **/__pycache__/
-experiment_logs/
+experiment_logs*/
 submodules/
 submodules/simple-knn
+run_experiment.py
+run_experiment*.py
