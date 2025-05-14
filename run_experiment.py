@@ -14,7 +14,7 @@ DEBUG_ENUMERATION = False
 # Set up argument parser for resuming
 parser = argparse.ArgumentParser(description='Run multiple PhysTrack training experiments')
 parser.add_argument('--resume_from', type=int, default=0, help='Resume from this experiment index')
-parser.add_argument('--log_dir', type=str, default='experiment_logs_triple_debug', help='Directory to store logs')
+parser.add_argument('--log_dir', type=str, default='experiment_logs_triple', help='Directory to store logs')
 args = parser.parse_args()
 
 # Base output directory for experiments

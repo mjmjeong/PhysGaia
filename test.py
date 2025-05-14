@@ -222,11 +222,15 @@ def run_test(dataset : ModelParams, iteration : int, pipeline : PipelineParams, 
             cameraslit = scene.getTestCameras()
             H,W = cameraslit[0].image_height, cameraslit[0].image_width
             gaussians.ts = torch.ones(1,1,H,W).cuda()
+        
+        if not skip_train:
+            render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, pipeline, background, rbfbasefunction, rdpip)
 
         if not skip_test and not multiview:            
             render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background, rbfbasefunction, rdpip)
         if multiview:
             render_setnogt(dataset.model_path, "mv", scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background, rbfbasefunction, rdpip)
+    
 
 if __name__ == "__main__":
     

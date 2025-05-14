@@ -98,7 +98,8 @@ def getrenderparts(render_pkg):
 
 def gettestparse():
     parser = ArgumentParser(description="Testing script parameters")
-    model = ModelParams(parser, sentinel=True)
+    # TODO: check if sentinel is needed
+    model = ModelParams(parser, sentinel=False)
     pipeline = PipelineParams(parser)
 
     parser.add_argument("--test_iteration", default=-1, type=int)
