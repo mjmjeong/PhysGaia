@@ -168,7 +168,7 @@ if __name__ == "__main__":
         # Build the render command
         render_cmd = [
             "python", "render.py",
-            "--m", save_path,
+            "--model_path", save_path,
         ]
         
         # Add initialization arguments

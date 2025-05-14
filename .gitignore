@@ -9,6 +9,7 @@ screenshots
 .idea
 **/__pycache__/
 experiment_logs*/
+evaluate_logs*/
 submodules/
 submodules/simple-knn
 run_experiment.py
