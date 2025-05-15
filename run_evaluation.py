@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run multiple PhysTrack evaluation experiments')
     parser.add_argument('--resume_from', type=int, default=0, help='Resume from this experiment index')
     parser.add_argument('--log_dir', type=str, default='evaluate_logs', help='Directory to store logs')
+    parser.add_argument('--check_only', action='store_true', help='Check only, do not run evaluation')
     args = parser.parse_args()
 
     # Base output directory for experiments
@@ -151,6 +152,10 @@ if __name__ == "__main__":
                 "experiment": expname,
                 "reason": "30000_runtimeresults.json file already exists"
             })
+            continue
+    
+        if args.check_only:
+            logger.info(f"There are missing experiment {expname}")
             continue
         
         # Create output directory for logs specific to this experiment

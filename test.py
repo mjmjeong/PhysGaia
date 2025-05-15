@@ -91,16 +91,16 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
 
     psnrs = []
-    lpipss = []
+    #lpipss = []
     lpipssvggs = []
 
     full_dict = {}
     per_view_dict = {}
     ssims = []
-    ssimsv2 = []
+    #ssimsv2 = []
     scene_dir = model_path
     image_names = []
-    times = []
+    #times = []
 
     full_dict[scene_dir] = {}
     per_view_dict[scene_dir] = {}
@@ -133,14 +133,14 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         ssims.append(ssim(rendering.unsqueeze(0),gt.unsqueeze(0))) 
 
         psnrs.append(psnr(rendering.unsqueeze(0), gt.unsqueeze(0)))
-        lpipss.append(lpips(rendering.unsqueeze(0), gt.unsqueeze(0), net_type='alex')) #
+        #lpipss.append(lpips(rendering.unsqueeze(0), gt.unsqueeze(0), net_type='alex')) #
         lpipssvggs.append( lpips(rendering.unsqueeze(0), gt.unsqueeze(0), net_type='vgg'))
 
         rendernumpy = rendering.permute(1,2,0).detach().cpu().numpy()
         gtnumpy = gt.permute(1,2,0).detach().cpu().numpy()
         
-        ssimv2 =  sk_ssim(rendernumpy, gtnumpy, multichannel=True)
-        ssimsv2.append(ssimv2)
+        #ssimv2 =  sk_ssim(rendernumpy, gtnumpy, multichannel=True)
+        #ssimsv2.append(ssimv2)
 
 
         
@@ -155,27 +155,28 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         torch.cuda.empty_cache()
 
     # start timing
-    for _ in range(4):
-        for idx, view in enumerate(tqdm(views, desc="timing ")):
+    # for _ in range(4):
+    #     for idx, view in enumerate(tqdm(views, desc="timing ")):
 
-            renderpack = render(view, gaussians, pipeline, background, scaling_modifier=1.0, basicfunction=rbfbasefunction,  GRsetting=GRsetting, GRzer=GRzer)#["time"] # C x H x W
-            duration = renderpack["duration"]
-            if idx > 10: #warm up
-                times.append(duration)
+    #         renderpack = render(view, gaussians, pipeline, background, scaling_modifier=1.0, basicfunction=rbfbasefunction,  GRsetting=GRsetting, GRzer=GRzer)#["time"] # C x H x W
+    #         duration = renderpack["duration"]
+    #         if idx > 10: #warm up
+    #             times.append(duration)
 
-    print(np.mean(np.array(times)))
+    # print(np.mean(np.array(times)))
     if len(views) > 0:
         full_dict[model_path][iteration].update({"SSIM": torch.tensor(ssims).mean().item(),
                                         "PSNR": torch.tensor(psnrs).mean().item(),
-                                        "LPIPS": torch.tensor(lpipss).mean().item(),
-                                        "ssimsv2": torch.tensor(ssimsv2).mean().item(),
+                                        #"LPIPS": torch.tensor(lpipss).mean().item(),
+                                        #"ssimsv2": torch.tensor(ssimsv2).mean().item(),
                                         "LPIPSVGG": torch.tensor(lpipssvggs).mean().item(),
-                                        "times": torch.tensor(times).mean().item()})
+                                        #"times": torch.tensor(times).mean().item()
+                                        })
         
         per_view_dict[model_path][iteration].update({"SSIM": {name: ssim for ssim, name in zip(torch.tensor(ssims).tolist(), image_names)},
                                                                 "PSNR": {name: psnr for psnr, name in zip(torch.tensor(psnrs).tolist(), image_names)},
-                                                                "LPIPS": {name: lp for lp, name in zip(torch.tensor(lpipss).tolist(), image_names)},
-                                                                "ssimsv2": {name: v for v, name in zip(torch.tensor(ssimsv2).tolist(), image_names)},
+                                                                #"LPIPS": {name: lp for lp, name in zip(torch.tensor(lpipss).tolist(), image_names)},
+                                                                #"ssimsv2": {name: v for v, name in zip(torch.tensor(ssimsv2).tolist(), image_names)},
                                                                 "LPIPSVGG": {name: lpipssvgg for lpipssvgg, name in zip(torch.tensor(lpipssvggs).tolist(), image_names)},})
         
             
