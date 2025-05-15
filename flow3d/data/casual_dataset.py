@@ -77,19 +77,23 @@ class CustomDataConfig:
     load_from_cache: bool = False
     
 
-
-def load_cameras_from_json(json_path: str, H: int, W: int) -> tuple[torch.Tensor, torch.Tensor]:
-    import json
-    import numpy as np
-    import torch
+def load_cameras_from_json(json_path: str, H: int, W: int, prefix) -> tuple[torch.Tensor, torch.Tensor]:
+    def extract_frame_index(path):
+        filename = os.path.basename(path)
+        nums = re.findall(r'\d+', filename)
+        return int(nums[0]) if nums else filename
 
     with open(json_path, 'r') as f:
         meta = json.load(f)
 
     angle_x = meta["camera_angle_x"]
-    frames = meta["frames"]
-    
-    fx = fy = 0.5 * W / np.tan(angle_x / 2)
+
+    frames = sorted(
+        [frame for frame in meta["frames"] if os.path.basename(frame["file_path"]).startswith(prefix)],
+        key=lambda frame: extract_frame_index(frame["file_path"])
+    )
+
+    fx = fy = 0.5 * H / np.tan(angle_x / 2)
     cx, cy = W / 2, H / 2
     K = np.array([
         [fx, 0, cx],
@@ -110,6 +114,7 @@ def load_cameras_from_json(json_path: str, H: int, W: int) -> tuple[torch.Tensor
     
     return torch.from_numpy(w2cs).float(), torch.from_numpy(Ks).float()
 
+    
 class CasualDataset(BaseDataset):
     def __init__(
         self,
@@ -147,7 +152,11 @@ class CasualDataset(BaseDataset):
 
         self.img_dir = f"{data_dir}/{image_type}/{res}"
         self.img_ext = os.path.splitext(os.listdir(self.img_dir)[0])[1]
-        self.depth_dir = f"{data_dir}/{depth_type}/{res}"
+        # self.depth_dir = f"{data_dir}/{depth_type}/{res}"
+        if self.res=="":
+            self.depth_dir = f"{data_dir}/{depth_type}/train/{res}"
+        else:
+            self.depth_dir = f"{data_dir}/{depth_type}/{res}"
         self.mask_dir = f"{data_dir}/{mask_type}/{res}"
         self.tracks_dir = f"{data_dir}/{track_2d_type}/{res}"
         self.cache_dir = f"{data_dir}/{res}"
@@ -207,10 +216,14 @@ class CasualDataset(BaseDataset):
             img = self.get_image(0)
             H, W = img.shape[:2]
             if self.res=="test":
+                guru.info(f"camera info test")
                 json_path = f"{data_dir}/camera_info_test.json"
             else:
                 json_path = f"{data_dir}/camera_info_train_mono.json"
-            w2cs, Ks = load_cameras_from_json(json_path, H, W)
+            if self.res =="test":
+                w2cs, Ks = load_cameras_from_json(json_path, H, W, prefix="1_")
+            else:
+                w2cs, Ks = load_cameras_from_json(json_path, H, W)
 
             w2cs = w2cs[valid_indices]
             Ks = Ks[valid_indices]
