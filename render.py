@@ -343,8 +343,14 @@ if __name__ == "__main__":
     parser.add_argument("--mode", default='render', choices=['render', 'time', 'view', 'all', 'pose', 'original'])
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
+    
+    # if init_colmap_sparse is not in args, add it
+    if "init_colmap_sparse" not in args:
+        args.init_colmap_sparse = False
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
+
+    print(args)
 
     render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.mode)

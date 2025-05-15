@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run multiple PhysTrack evaluation experiments')
     parser.add_argument('--resume_from', type=int, default=0, help='Resume from this experiment index')
     parser.add_argument('--log_dir', type=str, default='evaluate_logs', help='Directory to store logs')
+    parser.add_argument('--check_only', action='store_true', help='Check only, do not run evaluation')
     args = parser.parse_args()
 
     # Base output directory for experiments
@@ -144,15 +145,19 @@ if __name__ == "__main__":
         expname = f"{dataset_category}_{dataset_name}_{init_name}_{num_view}"
         save_path = os.path.join(output_base, expname)
         
-        # Check if the 'train' directory exists
-        train_dir = os.path.join(save_path, "train")
-        if os.path.exists(train_dir):
-            logger.info(f"'train' directory already exists at {train_dir}, skipping experiment {expname}")
+        # Check if results.json file exists 
+        metric_json_path = os.path.join(save_path, "results.json")
+        if os.path.exists(metric_json_path):
+            logger.info(f"'results.json' file already exists at {metric_json_path}, skipping experiment {expname}")
             results["skipped"].append({
                 "index": i,
                 "experiment": expname,
-                "reason": "train directory already exists"
+                "reason": "results.json file already exists"
             })
+            continue
+            
+        if args.check_only:
+            logger.info(f"There are missing experiment {expname}")
             continue
         
         # Create output directory for logs specific to this experiment
