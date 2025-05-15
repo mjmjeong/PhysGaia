@@ -46,7 +46,7 @@ class DavisDataConfig:
         "depth_anything_v2",
         "unidepth_disp",
     ] = "aligned_depth_anything"
-    camera_type: Literal["droid_recon", "megasam"] = "megasam"
+    camera_type: Literal["droid_recon", "megasam", "json"] = "megasam"
     track_2d_type: Literal["bootstapir", "tapir"] = "bootstapir"
     mask_erosion_radius: int = 3
     scene_norm_dict: tyro.conf.Suppress[SceneNormDict | None] = None
@@ -69,7 +69,7 @@ class CustomDataConfig:
         "depth_anything_v2",
         "unidepth_disp",
     ] = "aligned_depth_anything_v2"
-    camera_type: Literal["droid_recon", "megasam"] = "droid_recon"
+    camera_type: Literal["droid_recon", "megasam", "json"] = "json"
     track_2d_type: Literal["bootstapir", "tapir"] = "bootstapir"
     mask_erosion_radius: int = 7
     scene_norm_dict: tyro.conf.Suppress[SceneNormDict | None] = None
@@ -126,7 +126,7 @@ class CasualDataset(BaseDataset):
             "depth_anything_v2",
             "unidepth_disp",
         ] = "aligned_depth_anything",
-        camera_type: Literal["droid_recon", "megasam"] = "megasam",
+        camera_type: Literal["droid_recon", "megasam", "json"] = "megasam",
         track_2d_type: Literal["bootstapir", "tapir"] = "bootstapir",
         mask_erosion_radius: int = 3,
         scene_norm_dict: SceneNormDict | None = None,
@@ -287,7 +287,7 @@ class CasualDataset(BaseDataset):
 
     def get_depth(self, index) -> torch.Tensor:
         if self.depths[index] is None:
-            if self.camera_type == "droid_recon":
+            if self.camera_type == "droid_recon" or self.camera_type == "json":
                 self.depths[index] = self.load_depth(index)
             elif self.camera_type == "megasam":
                 data_name = self.data_dir.split("/")[-1]
