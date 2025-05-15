@@ -91,13 +91,14 @@ def get_depth_anything_disp(
     image = Image.open(img_file)
     disp = pipe(image)["predicted_depth"]
     # ensure disp is 4D: (B, C, H, W)
-    if disp.ndim == 3:  # (B, H, W)
-        disp = disp.unsqueeze(1)
-    elif disp.ndim == 2:  # (H, W)
+    if disp.ndim == 2:  # (H, W)
         disp = disp.unsqueeze(0).unsqueeze(0)
+    elif disp.ndim == 3:  # (B, H, W)
+        disp = disp.unsqueeze(1)
 
+    # Now disp.shape == (B, 1, H, W)
     disp = torch.nn.functional.interpolate(
-        disp.unsqueeze(1), size=image.size[::-1], mode="bicubic", align_corners=False
+        disp, size=image.size[::-1], mode="bicubic", align_corners=False
     )
     disp = disp.squeeze().cpu().numpy()
     if ret_type == "uint16":
@@ -243,6 +244,7 @@ def align_monodepth_with_colmap(
         scale = np.median(ms_colmap_disp / ms_mono_disp)
         shift = np.median(colmap_disp - scale * mono_disp)
         mono_disp_aligned = scale * mono_disp_map + shift
+        print("scale: ",scale)
 
         min_thre = min(1e-6, np.quantile(mono_disp_aligned, 0.01))
         # set depth values that are too small to invalid (0)
@@ -336,7 +338,7 @@ def align_monodepth_with_colmap_ply(
         ms_mono_disp = sampled_mono_disp[valid_mask] - np.median(sampled_mono_disp[valid_mask]) + 1e-8
         scale = np.median(ms_colmap_disp / ms_mono_disp)
         shift = np.median(colmap_disp[valid_mask] - scale * sampled_mono_disp[valid_mask])
-
+        print("scale: ",scale)
         mono_disp_aligned = scale * mono_disp_map + shift
         min_thre = min(1e-6, np.quantile(mono_disp_aligned, 0.01))
         mono_disp_aligned[mono_disp_aligned < min_thre] = 0.0
@@ -371,9 +373,9 @@ def main():
         "depth-anything-v2",
     ], f"Unknown model {args.model}"
 
-    # save_disp_from_dir(
-    #     args.model, args.img_dir, args.out_raw_dir, args.matching_pattern
-    # )
+    save_disp_from_dir(
+        args.model, args.img_dir, args.out_raw_dir, args.matching_pattern
+    )
 
     if args.sparse_dir is not None and args.ply_path is not None and args.out_aligned_dir is not None:
         align_monodepth_with_colmap_ply(

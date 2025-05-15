@@ -451,16 +451,29 @@ class Trainer:
             transfms_nbs,
             F.pad(self.model.fg.params["means"], (0, 1), value=1.0),
         )
-        means_fg_nbs = means_fg_nbs.reshape(
-            means_fg_nbs.shape[0], 3, -1, 3
-        )  # [G, 3, n, 3]
-        if self.losses_cfg.w_smooth_tracks > 0:
+        # means_fg_nbs = means_fg_nbs.reshape(
+        #     means_fg_nbs.shape[0], 3, -1, 3
+        # )  # [G, 3, n, 3]
+
+        if means_fg_nbs.numel() == 0:
+            small_accel_loss_tracks = torch.tensor(0.0, device=means_fg_nbs.device)
+        else:
+            means_fg_nbs = means_fg_nbs.reshape(means_fg_nbs.shape[0], 3, -1, 3)
             small_accel_loss_tracks = 0.5 * (
                 (2 * means_fg_nbs[:, 1:-1] - means_fg_nbs[:, :-2] - means_fg_nbs[:, 2:])
                 .norm(dim=-1)
                 .mean()
             )
+        if self.losses_cfg.w_smooth_tracks > 0:
             loss += small_accel_loss_tracks * self.losses_cfg.w_smooth_tracks
+
+        # if self.losses_cfg.w_smooth_tracks > 0:
+        #     small_accel_loss_tracks = 0.5 * (
+        #         (2 * means_fg_nbs[:, 1:-1] - means_fg_nbs[:, :-2] - means_fg_nbs[:, 2:])
+        #         .norm(dim=-1)
+        #         .mean()
+        #     )
+        #     loss += small_accel_loss_tracks * self.losses_cfg.w_smooth_tracks
 
 
         # Constrain the std of scales.
@@ -482,16 +495,18 @@ class Trainer:
         # loss += 0.01 * self.opacity_activation(self.opacities).abs().mean()
 
         # Acceleration along ray direction should be small.
-        z_accel_loss = compute_z_acc_loss(means_fg_nbs, w2cs)
-
-
+        # z_accel_loss = compute_z_acc_loss(means_fg_nbs, w2cs)
+        if means_fg_nbs.numel() == 0:
+            z_accel_loss = torch.tensor(0.0, device=device)
+        else:
+            z_accel_loss = compute_z_acc_loss(means_fg_nbs, w2cs)
         loss += self.losses_cfg.w_z_accel * z_accel_loss
 
-        guru.info(f"[Step {self.global_step}] RGB loss: {rgb_loss.item():.2f}, "
-                f"Mask loss: {mask_loss.item():.2f}, "
-                f"Depth loss: {depth_loss.item():.2f}, "
-                f"Mapped depth loss: {mapped_depth_loss.item():.2f}, "
-                f"Track2D loss: {track_2d_loss.item():.2f}")
+        # guru.info(f"[Step {self.global_step}] RGB loss: {rgb_loss.item():.2f}, "
+        #         f"Mask loss: {mask_loss.item():.2f}, "
+        #         f"Depth loss: {depth_loss.item():.2f}, "
+        #         f"Mapped depth loss: {mapped_depth_loss.item():.2f}, "
+        #         f"Track2D loss: {track_2d_loss.item():.2f}")
 
         # Prepare stats for logging.
         stats = {
@@ -511,8 +526,8 @@ class Trainer:
 
         # Compute metrics.
         with torch.no_grad():
-            guru.info(f"Rendered RGB mean/std: {rendered_imgs.mean():.3f}/{rendered_imgs.std():.3f}, "
-            f"GT RGB mean/std: {imgs.mean():.3f}/{imgs.std():.3f}")
+            # guru.info(f"Rendered RGB mean/std: {rendered_imgs.mean():.3f}/{rendered_imgs.std():.3f}, "
+            # f"GT RGB mean/std: {imgs.mean():.3f}/{imgs.std():.3f}")
             psnr = self.psnr_metric(
                 rendered_imgs, imgs, masks if not self.model.has_bg else valid_masks
             )
@@ -533,18 +548,18 @@ class Trainer:
             }
         )
 
-        for name, val in {
-            "rgb_loss": rgb_loss,
-            "mask_loss": mask_loss,
-            "depth_loss": depth_loss,
-            "depth_gradient_loss": depth_gradient_loss,
-            "mapped_depth_loss": mapped_depth_loss,
-            "track_2d_loss": track_2d_loss,
-            "small_accel_loss": small_accel_loss,
-            "z_accel_loss": z_accel_loss,
-        }.items():
-            if torch.isnan(val):
-                print(f"⚠️ NaN in {name}")
+        # for name, val in {
+        #     "rgb_loss": rgb_loss,
+        #     "mask_loss": mask_loss,
+        #     "depth_loss": depth_loss,
+        #     "depth_gradient_loss": depth_gradient_loss,
+        #     "mapped_depth_loss": mapped_depth_loss,
+        #     "track_2d_loss": track_2d_loss,
+        #     "small_accel_loss": small_accel_loss,
+        #     "z_accel_loss": z_accel_loss,
+        # }.items():
+        #     if torch.isnan(val):
+        #         print(f"⚠️ NaN in {name}")
 
 
         return loss, stats, num_rays_per_step, num_rays_per_sec

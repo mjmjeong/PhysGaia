@@ -60,7 +60,7 @@ class CustomDataConfig:
     start: int = 0
     end: int = -1
     res: str = ""
-    image_type: str = "colmap/dense/workspace/images/"
+    image_type: str = "colmap_single/dense/0/images/"
     mask_type: str = "masks"
     depth_type: Literal[
         "aligned_depth_anything",
@@ -75,7 +75,40 @@ class CustomDataConfig:
     scene_norm_dict: tyro.conf.Suppress[SceneNormDict | None] = None
     num_targets_per_frame: int = 4
     load_from_cache: bool = False
+    
 
+
+def load_cameras_from_json(json_path: str, H: int, W: int) -> tuple[torch.Tensor, torch.Tensor]:
+    import json
+    import numpy as np
+    import torch
+
+    with open(json_path, 'r') as f:
+        meta = json.load(f)
+
+    angle_x = meta["camera_angle_x"]
+    frames = meta["frames"]
+    
+    fx = fy = 0.5 * W / np.tan(angle_x / 2)
+    cx, cy = W / 2, H / 2
+    K = np.array([
+        [fx, 0, cx],
+        [0, fy, cy],
+        [0, 0, 1]
+    ])
+    
+    c2ws = []
+    for frame in frames:
+        c2w = np.array(frame["transform_matrix"])
+        flip = np.diag([1, -1, -1, 1])
+        c2w_cv = c2w @ flip
+        w2c = np.linalg.inv(c2w_cv)
+        c2ws.append(w2c)
+    
+    w2cs = np.stack(c2ws, axis=0)
+    Ks = np.tile(K[None, ...], (len(frames), 1, 1))
+    
+    return torch.from_numpy(w2cs).float(), torch.from_numpy(Ks).float()
 
 class CasualDataset(BaseDataset):
     def __init__(
@@ -114,15 +147,22 @@ class CasualDataset(BaseDataset):
 
         self.img_dir = f"{data_dir}/{image_type}/{res}"
         self.img_ext = os.path.splitext(os.listdir(self.img_dir)[0])[1]
-        self.depth_dir = f"{data_dir}/flow3d_preprocessed/{depth_type}_colmap/{res}"
-        self.mask_dir = f"{data_dir}/flow3d_preprocessed/{mask_type}/images/{res}"
-        self.tracks_dir = f"{data_dir}/flow3d_preprocessed/{track_2d_type}/{res}"
-        self.cache_dir = f"{data_dir}/flow3d_preprocessed/{res}"
+        self.depth_dir = f"{data_dir}/{depth_type}/{res}"
+        self.mask_dir = f"{data_dir}/{mask_type}/{res}"
+        self.tracks_dir = f"{data_dir}/{track_2d_type}/{res}"
+        self.cache_dir = f"{data_dir}/{res}"
         # frame_names = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.img_dir))]
 
         frame_names_all = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.img_dir))]
         frame_names = [fn for fn in frame_names_all if os.path.exists(os.path.join(self.depth_dir, f"{fn}.npy"))]
         valid_indices = [i for i, fn in enumerate(frame_names_all) if fn in frame_names]
+
+
+        track_files = os.listdir(self.tracks_dir)
+        query_names = sorted(set('_'.join(f.split('_')[:2]) for f in track_files if f.endswith('.npy')))
+        self.time_ids = torch.tensor([
+            i for i, name in enumerate(frame_names) if name in query_names
+        ], dtype=torch.long)
 
         if end == -1:
             end = len(frame_names)
@@ -140,9 +180,15 @@ class CasualDataset(BaseDataset):
         if camera_type == "droid_recon":
             img = self.get_image(0)
             H, W = img.shape[:2]
-            w2cs, Ks, tstamps = load_cameras(
-                f"{data_dir}/flow3d_preprocessed/{camera_type}_colmap.npy", H, W
-            )
+            if self.res=="test":
+                w2cs, Ks, tstamps = load_cameras(
+                    f"{data_dir}/{camera_type}_test.npy", H, W
+                )        
+            else:
+                w2cs, Ks, tstamps = load_cameras(
+                    f"{data_dir}/{camera_type}.npy", H, W
+                )
+
             w2cs = w2cs[valid_indices]
             Ks = Ks[valid_indices]
             
@@ -156,7 +202,19 @@ class CasualDataset(BaseDataset):
             c2ws = torch.from_numpy(c2ws)
             w2cs = torch.linalg.inv(c2ws)
             Ks = torch.from_numpy(K).unsqueeze(0).repeat((c2ws.shape[0], 1, 1))
-                
+
+        elif camera_type == "json":
+            img = self.get_image(0)
+            H, W = img.shape[:2]
+            if self.res=="test":
+                json_path = f"{data_dir}/camera_info_test.json"
+            else:
+                json_path = f"{data_dir}/camera_info_train_mono.json"
+            w2cs, Ks = load_cameras_from_json(json_path, H, W)
+
+            w2cs = w2cs[valid_indices]
+            Ks = Ks[valid_indices]
+
         else:
             raise ValueError(f"Unknown camera type: {camera_type}")
 
@@ -314,6 +372,9 @@ class CasualDataset(BaseDataset):
         for q_idx in query_idcs:
             # (N, T, 4)
             tracks_2d = self.load_target_tracks(q_idx, target_idcs)
+            if len(tracks_2d) == 0:
+                guru.warning(f"Skipping query {q_idx} due to empty tracks.")
+                continue
             num_sel = int(
                 min(num_per_query_frame, num_samples - cur_num, len(tracks_2d))
             )
@@ -543,5 +604,5 @@ def compute_scene_norm(
     return scale, transfm
 
 
-if __name__ == "__main__":
-    d = CasualDataset("bear", "/shared/vye/datasets/DAVIS", camera_type="droid_recon")
+# if __name__ == "__main__":
+#     d = CasualDataset("bear", "/shared/vye/datasets/DAVIS", camera_type="droid_recon")

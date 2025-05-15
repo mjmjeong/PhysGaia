@@ -633,8 +633,14 @@ def interp_masked(vals: cp.ndarray, mask: cp.ndarray, pad: int = 1) -> cp.ndarra
 
     cx = cp.arange(B * M_pad)
     out = cp.zeros((B * M_pad, D), dtype=vals_flat.dtype)
+    # for d in range(D):
+    #     out[:, d] = cp.interp(cx, idcs, vals_flat[idcs, d])
+
     for d in range(D):
-        out[:, d] = cp.interp(cx, idcs, vals_flat[idcs, d])
+        if idcs.size == 0:
+            out[:, d] = cp.mean(vals_flat[:, d])  # 또는 0도 가능
+        else:
+            out[:, d] = cp.interp(cx, idcs, vals_flat[idcs, d])
 
     out = out.reshape((B, M_pad, *sh))[:, pad:-pad]
     return out

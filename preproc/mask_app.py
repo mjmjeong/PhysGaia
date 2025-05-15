@@ -80,7 +80,7 @@ class PromptGUI(object):
         self.index_masks_all = []
         self.color_masks_all = []
 
-    def set_img_dir(self, img_dir: str, matching_pattern: str = "0_*") -> int:
+    def set_img_dir(self, img_dir: str, matching_pattern: str = "1*") -> int:
         self._clear_image()
         self.img_dir = img_dir
         # self.img_paths = [

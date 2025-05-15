@@ -19,7 +19,7 @@ def main(
         Annotated[DavisDataConfig, tyro.conf.subcommand(name="davis")],
         Annotated[DavisDataConfig, tyro.conf.subcommand(name="custom")],
     ],
-    port: int = 8890,
+    port: int = 8892,
 ):
     guru.remove()
     guru.add(sys.stdout, level="INFO")

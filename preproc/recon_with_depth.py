@@ -1,5 +1,6 @@
 import os
 import sys
+import fnmatch
 
 basedir = os.path.dirname(os.path.abspath(__file__))
 rootdir = os.path.dirname(basedir)
@@ -51,6 +52,44 @@ def load_calib_from_colmap(sparse_dir: str, img_dir: str) -> dict[str, list[floa
         calib_dict[name] = [fx, fy, cx, cy]
     return calib_dict
 
+
+def load_calib_from_camera_json(json_path, img_dir):
+    import json
+    import os
+    import numpy as np
+    import imageio.v3 as iio
+    
+    with open(json_path, 'r') as f:
+        meta = json.load(f)
+    
+    angle_x = meta["camera_angle_x"]
+    calib_dict = {}
+    
+    for frame in meta["frames"]:
+        file_path = frame["file_path"]  
+        
+        # Handle different path formats in JSON
+        image_name = os.path.basename(file_path) + ".png"
+        image_path = os.path.join(img_dir, image_name)
+        
+        # Skip if image doesn't exist
+        if not os.path.exists(image_path):
+            continue
+        
+        # Read image to get dimensions
+        img = iio.imread(image_path)
+        h, w = img.shape[:2]
+        
+        # Calculate camera intrinsics based on field of view
+        fx = fy = 0.5 * w / np.tan(angle_x / 2)
+        cx, cy = w / 2, h / 2
+        
+        # Store calibration parameters as a list [fx, fy, cx, cy]
+        name = os.path.splitext(image_name)[0]
+        calib_dict[name] = [float(fx), float(fy), float(cx), float(cy)]
+    
+    return calib_dict
+
 def preproc_image(image, calib):
     if len(calib) > 4:
         fx, fy, cx, cy = calib[:4]
@@ -66,25 +105,33 @@ def preproc_image(image, calib):
     return image, (h0, w0), (h1, w1)
 
 
-def image_stream(img_dir, calib_path, stride, depth_dir: str | None = None):
+def image_stream(img_dir, calib_path, stride, matching_pattern, depth_dir: str | None = None):
     """image generator"""
 
     # with open(calib_path, "r") as f:
     #     calib_dict = json.load(f)
-
     if calib_path.endswith(".json"):
-        with open(calib_path, "r") as f:
-            calib_dict = json.load(f)
+        # with open(calib_path, "r") as f:
+        #     calib_dict = json.load(f)
+        calib_dict = load_calib_from_camera_json(calib_path, img_dir)
     else:
         calib_dict = load_calib_from_colmap(calib_path, img_dir)
 
     if depth_dir is not None:
+        # img_path_list = sorted([
+        #     f for f in os.listdir(img_dir)
+        #     if (os.path.exists(os.path.join(depth_dir, os.path.splitext(f)[0] + ".npy")))
+        # ])[::stride]
         img_path_list = sorted([
             f for f in os.listdir(img_dir)
-            if (os.path.exists(os.path.join(depth_dir, os.path.splitext(f)[0] + ".npy")))
+            if fnmatch.fnmatch(f, matching_pattern) and (
+                depth_dir is None or os.path.exists(os.path.join(depth_dir, os.path.splitext(f)[0] + ".npy"))
+            )
         ])[::stride]
+
     else:
-        img_path_list = sorted(os.listdir(img_dir))[::stride]
+        # img_path_list = sorted(os.listdir(img_dir))[::stride]
+        img_path_list = sorted([f for f in os.listdir(img_dir) if fnmatch.fnmatch(f, matching_pattern)])[::stride]
 
     # give all images the same calibration
     calibs = torch.tensor([calib_dict[os.path.splitext(im)[0]] for im in img_path_list])
@@ -153,7 +200,7 @@ def save_reconstruction(
     if vis:
         import viser
 
-        server = viser.ViserServer(port=8890)
+        server = viser.ViserServer(port=8891)
         handles = []
         for t in range(T):
             m = masks[t]
@@ -259,6 +306,8 @@ if __name__ == "__main__":
     parser.add_argument("--backend_nms", type=int, default=3)
     parser.add_argument("--upsample", action="store_true")
     parser.add_argument("--out_path", help="path to saved reconstruction")
+    parser.add_argument("--matching_pattern", type=str, default="1_", help="Filename pattern like '1_*'")
+
     args = parser.parse_args()
 
     args.stereo = False
@@ -272,7 +321,7 @@ if __name__ == "__main__":
 
     tstamps = []
     for t, image, intrinsics, depth in tqdm(
-        image_stream(args.img_dir, args.calib, args.stride, depth_dir=args.depth_dir)
+        image_stream(args.img_dir, args.calib, args.stride, args.matching_pattern, depth_dir=args.depth_dir)
     ):
         if t < args.t0:
             continue
@@ -287,7 +336,7 @@ if __name__ == "__main__":
         # print(f"{t=} {image.shape=} {depth.shape if depth is not None else None}")
         droid.track(t, image, depth=depth, intrinsics=intrinsics)
 
-    traj_est = droid.terminate(image_stream(args.img_dir, args.calib, args.stride))
+    traj_est = droid.terminate(image_stream(args.img_dir, args.calib, args.stride, args.matching_pattern))
 
     if args.out_path is not None:
         save_reconstruction(droid, traj_est, args.out_path)

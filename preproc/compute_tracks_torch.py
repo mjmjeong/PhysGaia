@@ -26,6 +26,7 @@ def read_video(folder_path, prefix_filter="0_"):
         fp for fp in glob.glob(os.path.join(folder_path, "*"))
         if os.path.basename(fp).startswith(prefix_filter)
     ])
+
     video = np.stack([imageio.imread(frame_path) for frame_path in frame_paths])
     return media._VideoArray(video)
 
@@ -101,13 +102,10 @@ def main():
     resize_width = args.resize_width
     grid_size = args.grid_size
 
-    video = read_video(folder_path)
+    video = read_video(folder_path, prefix_filter="0_")
     num_frames, height, width = video.shape[0:3]
-    masks = read_video(mask_dir)
-    # masks = read_video(mask_dir, prefix_filter="0_")
-
-    # for i in range(len(masks)):
-    #     print(f"Frame {i}: mask sum = {masks[i].sum()}")
+    # masks = read_video(mask_dir)
+    masks = read_video(mask_dir, prefix_filter="0_")
 
     masks = (masks.reshape((num_frames, height, width, -1)) > 0).any(axis=-1)
     print(f"{video.shape=} {masks.shape=} {masks.max()=} {masks.sum()=}")
