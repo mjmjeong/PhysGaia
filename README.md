@@ -1,1 +1,1 @@
-# PhysTrack: A Physics-Informed Benchmark with 3D Tracking for Dynamic Novel View Synthesis
+# PhysGaia: A Physics-Aware Dataset of Multi-Body Interactions for Dynamic Novel View Synthesis
