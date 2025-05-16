@@ -29,7 +29,7 @@ from flow3d.data.utils import (
 )
 from flow3d.data.colmap import get_colmap_camera_params_txt
 from flow3d.transforms import rt_to_mat4
-
+import re
 
 @dataclass
 class DavisDataConfig:
@@ -75,13 +75,14 @@ class CustomDataConfig:
     scene_norm_dict: tyro.conf.Suppress[SceneNormDict | None] = None
     num_targets_per_frame: int = 4
     load_from_cache: bool = False
-    
+
+import json 
 
 def load_cameras_from_json(json_path: str, H: int, W: int, prefix) -> tuple[torch.Tensor, torch.Tensor]:
     def extract_frame_index(path):
         filename = os.path.basename(path)
         nums = re.findall(r'\d+', filename)
-        return int(nums[0]) if nums else filename
+        return int(nums[-1]) if nums else filename
 
     with open(json_path, 'r') as f:
         meta = json.load(f)
@@ -93,7 +94,7 @@ def load_cameras_from_json(json_path: str, H: int, W: int, prefix) -> tuple[torc
         key=lambda frame: extract_frame_index(frame["file_path"])
     )
 
-    fx = fy = 0.5 * H / np.tan(angle_x / 2)
+    fx = fy = 0.5 * W / np.tan(angle_x / 2)
     cx, cy = W / 2, H / 2
     K = np.array([
         [fx, 0, cx],
@@ -114,7 +115,7 @@ def load_cameras_from_json(json_path: str, H: int, W: int, prefix) -> tuple[torc
     
     return torch.from_numpy(w2cs).float(), torch.from_numpy(Ks).float()
 
-    
+
 class CasualDataset(BaseDataset):
     def __init__(
         self,
@@ -223,7 +224,7 @@ class CasualDataset(BaseDataset):
             if self.res =="test":
                 w2cs, Ks = load_cameras_from_json(json_path, H, W, prefix="1_")
             else:
-                w2cs, Ks = load_cameras_from_json(json_path, H, W)
+                w2cs, Ks = load_cameras_from_json(json_path, H, W, prefix="0_")
 
             w2cs = w2cs[valid_indices]
             Ks = Ks[valid_indices]
