@@ -32,3 +32,6 @@ __pycache__/
 *.class
 data/
 results/
+
+vis_*
+*.png
