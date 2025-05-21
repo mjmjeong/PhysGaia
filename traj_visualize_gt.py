@@ -138,6 +138,8 @@ def main():
 
         # compute depths on first frame
         first = data[0]
+        if obj == 'syrup':
+            first = data[10]
         depths = np.array([np.dot(pos-cam_pos, view_dir) for pos in first.values()],dtype=np.float32)
         pids    = list(first.keys())
         # sort by depth ascending
