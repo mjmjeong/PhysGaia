@@ -73,6 +73,33 @@ def render_set(model_path, load2gpu_on_the_fly, is_6dof, name, iteration, views,
     fps = 1.0 / t.mean()
     print(f'Test FPS: \033[1;35m{fps:.5f}\033[0m, Num. of GS: {xyz.shape[0]}')
 
+def render_set_traj(model_path, load2gpu_on_the_fly, is_6dof, name, iteration, views, gaussians, pipeline, background, deform):
+
+    # N, T, 3
+    traj_file = os.path.join(model_path, "traj.pt")
+    traj_list = []
+
+
+    for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
+        if load2gpu_on_the_fly:
+            view.load2device()
+
+        fid = view.fid
+        xyz = gaussians.get_xyz
+        time_input = fid.unsqueeze(0).expand(xyz.shape[0], -1)
+        d_xyz, d_rotation, d_scaling = deform.step(xyz.detach(), time_input)
+        results = render(view, gaussians, pipeline, background, d_xyz, d_rotation, d_scaling, is_6dof)
+
+        centers = results["means3D"]   # shape : N, 3
+        opacity = results["opacity"]   # shape : N, 1
+
+        traj_list.append(torch.cat([centers, opacity], dim=1))
+    
+    traj = torch.stack(traj_list, dim=0)
+    traj.permute(1, 0, 2)
+    torch.save(traj, traj_file)
+
+
 
 def interpolate_time(model_path, load2gpt_on_the_fly, is_6dof, name, iteration, views, gaussians, pipeline, background, deform):
     render_path = os.path.join(model_path, name, "interpolate_{}".format(iteration), "renders")
@@ -309,6 +336,8 @@ def render_sets(dataset: ModelParams, iteration: int, pipeline: PipelineParams, 
 
         if mode == "render":
             render_func = render_set
+        elif mode == "render_traj":
+            render_func = render_set_traj
         elif mode == "time":
             render_func = interpolate_time
         elif mode == "view":
@@ -340,7 +369,7 @@ if __name__ == "__main__":
     parser.add_argument("--skip_train", action="store_true")
     parser.add_argument("--skip_test", action="store_true")
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--mode", default='render', choices=['render', 'time', 'view', 'all', 'pose', 'original'])
+    parser.add_argument("--mode", default='render', choices=['render', 'time', 'view', 'all', 'pose', 'original', 'render_traj'])
     args = get_combined_args(parser)
     print("Rendering " + args.model_path)
     
