@@ -107,6 +107,7 @@ def train_ours_full(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
             "visibility_filter" : radii > 0,
             "radii": radii,
             "opacity": opacity,
+            #"means3D": means3D,
             "depth": depth}
 
 
@@ -282,6 +283,8 @@ def test_ours_full_fused(viewpoint_camera, pc : GaussianModel, pipe, bg_color : 
             "visibility_filter" : radii > 0,
             "radii": radii,
             "rawrendered_image": rendered_image,
+            "means3D": pc.get_xyz,
+            "opacity": pc.computedopacity,
              "duration": duration}
 
 

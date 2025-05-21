@@ -57,7 +57,7 @@ from thirdparty.gaussian_splatting.arguments import ModelParams, PipelineParams
 warnings.filterwarnings("ignore")
 
 # modified from https://github.com/graphdeco-inria/gaussian-splatting/blob/main/render.py and https://github.com/graphdeco-inria/gaussian-splatting/blob/main/metrics.py
-def render_set(model_path, name, iteration, views, gaussians, pipeline, background, rbfbasefunction, rdpip):
+def render_set(model_path, name, iteration, views, gaussians, pipeline, background, rbfbasefunction, rdpip, render_traj=False):
     render, GRsetting, GRzer = getrenderpip(rdpip) 
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
     gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
@@ -84,10 +84,10 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     statsdict["op_max"] = opmax
     statsdict["op_mean"] = opmean 
 
-
-    statspath = os.path.join(model_path, "stat_" + str(iteration) + ".json")
-    with open(statspath, 'w') as fp:
-            json.dump(statsdict, fp, indent=True)
+    if not render_traj:
+        statspath = os.path.join(model_path, "stat_" + str(iteration) + ".json")
+        with open(statspath, 'w') as fp:
+                json.dump(statsdict, fp, indent=True)
 
 
     psnrs = []
@@ -124,14 +124,24 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     else:
         render, GRsetting, GRzer = getrenderpip(rdpip) 
 
+    traj_list = []
 
     for idx, view in enumerate(tqdm(views, desc="Rendering and metric progress")):
         renderingpkg = render(view, gaussians, pipeline, background, scaling_modifier=1.0, basicfunction=rbfbasefunction,  GRsetting=GRsetting, GRzer=GRzer) # C x H x W
+
+
+        if render_traj:
+            centers = renderingpkg["means3D"]   # shape : N, 3
+            opacity = renderingpkg["opacity"]   # shape : N, 1
+
+            traj_list.append(torch.cat([centers, opacity], dim=1))
+
+            continue
+        
         rendering = renderingpkg["render"]
         rendering = torch.clamp(rendering, 0, 1.0)
         gt = view.original_image[0:3, :, :].cuda().float()
         ssims.append(ssim(rendering.unsqueeze(0),gt.unsqueeze(0))) 
-
         psnrs.append(psnr(rendering.unsqueeze(0), gt.unsqueeze(0)))
         #lpipss.append(lpips(rendering.unsqueeze(0), gt.unsqueeze(0), net_type='alex')) #
         lpipssvggs.append( lpips(rendering.unsqueeze(0), gt.unsqueeze(0), net_type='vgg'))
@@ -148,7 +158,14 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         torchvision.utils.save_image(gt, os.path.join(gts_path, '{0:05d}'.format(idx) + ".png"))
         image_names.append('{0:05d}'.format(idx) + ".png")
 
-    
+    if render_traj:
+        traj = torch.stack(traj_list, dim=0)
+        traj.permute(1, 0, 2)
+        traj_file = os.path.join(model_path, "traj.pt")
+        torch.save(traj, traj_file)
+
+
+        return
 
     for idx, view in enumerate(tqdm(views, desc="release gt images cuda memory for timing")):
         view.original_image = None #.detach()  
@@ -205,7 +222,7 @@ def render_setnogt(model_path, name, iteration, views, gaussians, pipeline, back
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
 
 
-def run_test(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, multiview : bool, duration: int, rgbfunction="rgbv1", rdpip="v2", loader="colmap"):
+def run_test(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool, multiview : bool, duration: int, rgbfunction="rgbv1", rdpip="v2", loader="colmap", render_traj=False):
     
     with torch.no_grad():
         print("use model {}".format(dataset.model))
@@ -224,6 +241,11 @@ def run_test(dataset : ModelParams, iteration : int, pipeline : PipelineParams, 
             H,W = cameraslit[0].image_height, cameraslit[0].image_width
             gaussians.ts = torch.ones(1,1,H,W).cuda()
         
+        if render_traj:
+            render_set(dataset.model_path, "test", scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background, rbfbasefunction, rdpip, render_traj=render_traj)
+
+            return
+        
         if not skip_train:
             render_set(dataset.model_path, "train", scene.loaded_iter, scene.getTrainCameras(), gaussians, pipeline, background, rbfbasefunction, rdpip)
 
@@ -234,7 +256,9 @@ def run_test(dataset : ModelParams, iteration : int, pipeline : PipelineParams, 
     
 
 if __name__ == "__main__":
+
+    render_traj = False
     
 
     args, model_extract, pp_extract, multiview =gettestparse()
-    run_test(model_extract, args.test_iteration, pp_extract, args.skip_train, args.skip_test, multiview, args.duration,  rgbfunction=args.rgbfunction, rdpip=args.rdpip, loader=args.valloader)
+    run_test(model_extract, args.test_iteration, pp_extract, args.skip_train, args.skip_test, multiview, args.duration,  rgbfunction=args.rgbfunction, rdpip=args.rdpip, loader=args.valloader, render_traj=render_traj)
