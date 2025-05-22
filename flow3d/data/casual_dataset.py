@@ -74,46 +74,52 @@ class CustomDataConfig:
     mask_erosion_radius: int = 7
     scene_norm_dict: tyro.conf.Suppress[SceneNormDict | None] = None
     num_targets_per_frame: int = 4
-    load_from_cache: bool = False
+    load_from_cache: bool = True
+    depth_res: str = ""
+    cache_res: str = ""
 
 import json 
 
-def load_cameras_from_json(json_path: str, H: int, W: int, prefix) -> tuple[torch.Tensor, torch.Tensor]:
-    def extract_frame_index(path):
-        filename = os.path.basename(path)
-        nums = re.findall(r'\d+', filename)
-        return int(nums[-1]) if nums else filename
+
+def load_cameras_from_json(json_path: str, H: int, W: int, prefix: str, frame_names: list[str]) -> tuple[torch.Tensor, torch.Tensor]:
+    import re
+
+    def extract_frame_name(path):
+        return os.path.splitext(os.path.basename(path))[0]
 
     with open(json_path, 'r') as f:
         meta = json.load(f)
 
     angle_x = meta["camera_angle_x"]
-
-    frames = sorted(
-        [frame for frame in meta["frames"] if os.path.basename(frame["file_path"]).startswith(prefix)],
-        key=lambda frame: extract_frame_index(frame["file_path"])
-    )
-
-    fx = fy = 0.5 * W / np.tan(angle_x / 2)
+    fx = fy = 0.5 * H / np.tan(angle_x / 2)
     cx, cy = W / 2, H / 2
     K = np.array([
         [fx, 0, cx],
         [0, fy, cy],
         [0, 0, 1]
     ])
-    
-    c2ws = []
-    for frame in frames:
+
+    frame_dict = {}
+    for frame in meta["frames"]:
+        frame_name = extract_frame_name(frame["file_path"])
+        if not frame_name.startswith(prefix):
+            continue
         c2w = np.array(frame["transform_matrix"])
         flip = np.diag([1, -1, -1, 1])
-        c2w_cv = c2w @ flip
-        w2c = np.linalg.inv(c2w_cv)
-        c2ws.append(w2c)
-    
-    w2cs = np.stack(c2ws, axis=0)
-    Ks = np.tile(K[None, ...], (len(frames), 1, 1))
-    
-    return torch.from_numpy(w2cs).float(), torch.from_numpy(Ks).float()
+        c2w = c2w @ flip
+        w2c = np.linalg.inv(c2w)
+        frame_dict[frame_name] = w2c
+
+    w2cs, Ks = [], []
+    for name in frame_names:
+        if name in frame_dict:
+            w2cs.append(frame_dict[name])
+            Ks.append(K)
+        else:
+            guru.warning(f"Frame {name} not found in JSON camera file")
+
+    return torch.from_numpy(np.stack(w2cs)).float(), torch.from_numpy(np.stack(Ks)).float()
+
 
 
 class CasualDataset(BaseDataset):
@@ -138,6 +144,8 @@ class CasualDataset(BaseDataset):
         scene_norm_dict: SceneNormDict | None = None,
         num_targets_per_frame: int = 4,
         load_from_cache: bool = False,
+        depth_res: str = "",
+        cache_res: str = "",
         **_,
     ):
         super().__init__()
@@ -154,15 +162,63 @@ class CasualDataset(BaseDataset):
         self.img_dir = f"{data_dir}/{image_type}/{res}"
         self.img_ext = os.path.splitext(os.listdir(self.img_dir)[0])[1]
         # self.depth_dir = f"{data_dir}/{depth_type}/{res}"
-        if self.res=="":
-            self.depth_dir = f"{data_dir}/{depth_type}/train/{res}"
-        else:
-            self.depth_dir = f"{data_dir}/{depth_type}/{res}"
-        self.mask_dir = f"{data_dir}/{mask_type}/{res}"
-        self.tracks_dir = f"{data_dir}/{track_2d_type}/{res}"
-        self.cache_dir = f"{data_dir}/{res}"
-        # frame_names = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.img_dir))]
 
+        # depth_dir_2 = None
+        # if self.res=="":
+        #     self.depth_dir = f"{data_dir}/{depth_type}/train/{res}"
+        # else:
+        #     if depth_res != "":
+        #         depth_root = f"{data_dir}/{depth_type}/{depth_res}"
+        #     else:
+        #         depth_root = f"{data_dir}/{depth_type}/{res}"
+        #     # depth_dir_2 = os.path.join(depth_root, "2")
+
+        #     # if os.path.isdir(depth_dir_2):
+        #     #     self.depth_dir = depth_dir_2
+        #     # else:
+        #     self.depth_dir = depth_root
+
+        # self.mask_dir = f"{data_dir}/{mask_type}/{res}"
+        # self.tracks_dir = f"{data_dir}/{track_2d_type}/{res}"
+
+        if res == "":
+            self.img_dir = f"{data_dir}/{image_type}"
+            self.mask_dir = f"{data_dir}/{mask_type}"
+            self.tracks_dir = f"{data_dir}/{track_2d_type}"
+        else:
+            self.img_dir = f"{data_dir}/{image_type}/{res}"
+            self.mask_dir = f"{data_dir}/{mask_type}/{res}"
+            self.tracks_dir = f"{data_dir}/{track_2d_type}/{res}"
+
+        if res == "":
+            if depth_res != "":
+                self.depth_dir = f"{data_dir}/{depth_type}/{depth_res}"
+            else:
+                self.depth_dir = f"{data_dir}/{depth_type}/train/{depth_res}"
+        else:
+            if depth_res != "":
+                self.depth_dir = f"{data_dir}/{depth_type}/{depth_res}"
+            else:
+                self.depth_dir = f"{data_dir}/{depth_type}/{res}"
+
+
+        if cache_res != "":
+            self.cache_dir = f"{data_dir}/{cache_res}"
+        else:
+            self.cache_dir = f"{data_dir}/{res}"
+        # frame_names = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.img_dir))]
+        
+        # if os.path.isdir(depth_dir_2):
+        #     frame_names_all = [
+        #         os.path.splitext(p)[0]
+        #         for p in sorted(os.listdir(self.img_dir))
+        #         if os.path.splitext(p)[0].startswith("2_")
+        #     ]
+        # else:
+        guru.info(f"img directory:  {self.img_dir}")
+        guru.info(f"depth directory: {self.depth_dir}")
+        guru.info(f"mask directory:  {self.mask_dir}")
+        guru.info(f"track directory: {self.tracks_dir}")
         frame_names_all = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.img_dir))]
         frame_names = [fn for fn in frame_names_all if os.path.exists(os.path.join(self.depth_dir, f"{fn}.npy"))]
         valid_indices = [i for i, fn in enumerate(frame_names_all) if fn in frame_names]
@@ -222,9 +278,10 @@ class CasualDataset(BaseDataset):
             else:
                 json_path = f"{data_dir}/camera_info_train_mono.json"
             if self.res =="test":
-                w2cs, Ks = load_cameras_from_json(json_path, H, W, prefix="1_")
+                w2cs, Ks = load_cameras_from_json(json_path, H, W, prefix="1_", frame_names=self.frame_names)
+
             else:
-                w2cs, Ks = load_cameras_from_json(json_path, H, W, prefix="0_")
+                w2cs, Ks = load_cameras_from_json(json_path, H, W, prefix="0_", frame_names=self.frame_names)
 
             w2cs = w2cs[valid_indices]
             Ks = Ks[valid_indices]
