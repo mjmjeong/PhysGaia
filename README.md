@@ -36,7 +36,7 @@ Each folder is corresponding to each scene, containing the following files:
 ```bash
 {material_type}_{scene_name}.zip
 │
-├── render/                              # Generated images (e.g., avatar renderings)
+├── render/                              # Rendered images
 │   ├── train/                           # Images for training
 │   └── test/                            # Images for evaluation
 │
