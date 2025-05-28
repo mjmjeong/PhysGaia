@@ -1,213 +1,103 @@
-# Deformable 3D Gaussians for High-Fidelity Monocular Dynamic Scene Reconstruction
+# 🌱 PhysGaia: A Physics-Aware Dataset of Multi-Body Interactions for Dynamic Novel View Synthesis
 
-## [Project page](https://ingra14m.github.io/Deformable-Gaussians/) | [Paper](https://arxiv.org/abs/2309.13101)
+This branch contains the implementation of [D-3DGS (CVPR2024)](https://shape-of-motion.github.io/](https://github.com/ingra14m/Deformable-3D-Gaussians)) using our PhysGaia dataset.
+For general information about PhysGaia, please refer to the [main branch](https://github.com/mjmjeong/PhysGaia).
 
-![Teaser image](assets/teaser.png)
+## **💻 Getting Started with D-3DGS on PhysGaia**
 
-This repository contains the official implementation associated with the paper "Deformable 3D Gaussians for High-Fidelity Monocular Dynamic Scene Reconstruction".
+### Training
 
-
-
-## News
-
-- **[5/26/2024]** [Lightweight-Deformable-GS](https://github.com/ingra14m/Lightweight-Deformable-GS) has been integrated into this repo. For the original version aligned with paper, please check the [paper](https://github.com/ingra14m/Deformable-3D-Gaussians/tree/paper) branch.
-- **[5/24/2024]** An optimized version [Lightweight-Deformable-GS](https://github.com/ingra14m/Lightweight-Deformable-GS) has been released. It offers 50% reduced storage, 200% increased FPS, and no decrease in rendering metrics.
-- **[2/27/2024]** Deformable-GS is accepted by CVPR 2024. Our another work, [SC-GS](https://yihua7.github.io/SC-GS-web/) (with higher quality, less points and faster FPS than vanilla 3D-GS), is also accepted. See you in Seattle.
-- **[11/16/2023]** Full code and real-time viewer released.
-- **[11/4/2023]** update the computation of LPIPS in metrics.py. Previously, the `lpipsPyTorch` was unable to execute on CUDA, prompting us to switch to the `lpips` library (~20x faster).
-- **[10/25/2023]** update **real-time viewer** on project page. Many, many thanks to @[yihua7](https://github.com/yihua7) for implementing the real-time viewer adapted for Deformable-GS. Also, thanks to @[ashawkey](https://github.com/ashawkey) for releasing the original GUI.
-
-
-
-## Dataset
-
-In our paper, we use:
-
-- synthetic dataset from [D-NeRF](https://www.albertpumarola.com/research/D-NeRF/index.html).
-- real-world dataset from [NeRF-DS](https://jokeryan.github.io/projects/nerf-ds/) and [Hyper-NeRF](https://hypernerf.github.io/).
-- The dataset in the supplementary materials comes from [DeVRF](https://jia-wei-liu.github.io/DeVRF/).
-
-We organize the datasets as follows:
-
-```shell
-├── data
-│   | D-NeRF 
-│     ├── hook
-│     ├── standup 
-│     ├── ...
-│   | NeRF-DS
-│     ├── as
-│     ├── basin
-│     ├── ...
-│   | HyperNeRF
-│     ├── interp
-│     ├── misc
-│     ├── vrig
 ```
 
-> I have identified an **inconsistency in the D-NeRF's Lego dataset**. Specifically, the scenes corresponding to the training set differ from those in the test set. This discrepancy can be verified by observing the angle of the flipped Lego shovel. To meaningfully evaluate the performance of our method on this dataset, I recommend using the **validation set of the Lego dataset** as the test set. See more in [D-NeRF dataset used in Deformable-GS](https://github.com/ingra14m/Deformable-3D-Gaussians/releases/tag/v0.1-pre-released)
-
-
-
-## Pipeline
-
-![Teaser image](assets/pipeline.png)
-
-
-
-## Run
-
-### Environment
-
-```shell
-git clone https://github.com/ingra14m/Deformable-3D-Gaussians --recursive
-cd Deformable-3D-Gaussians
-
-conda create -n deformable_gaussian_env python=3.7
-conda activate deformable_gaussian_env
-
-# install pytorch
-pip install torch==1.13.1+cu116 torchvision==0.14.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
-
-# install dependencies
-pip install -r requirements.txt
 ```
 
-
-
-### Train
-
-**D-NeRF:**
-
-```shell
-python train.py -s path/to/your/d-nerf/dataset -m output/exp-name --eval --is_blender
-```
-
-**NeRF-DS/HyperNeRF:**
-
-```shell
-python train.py -s path/to/your/real-world/dataset -m output/exp-name --eval --iterations 20000
-```
-
-**6DoF Transformation:**
-
-We have also implemented the 6DoF transformation of 3D-GS, which may lead to an improvement in metrics but will reduce the speed of training and inference.
-
-```shell
-# D-NeRF
-python train.py -s path/to/your/d-nerf/dataset -m output/exp-name --eval --is_blender --is_6dof
-
-# NeRF-DS & HyperNeRF
-python train.py -s path/to/your/real-world/dataset -m output/exp-name --eval --is_6dof --iterations 20000
-```
-
-You can also **train with the GUI:**
-
-```shell
-python train_gui.py -s path/to/your/dataset -m output/exp-name --eval --is_blender
-```
-
-- click `start` to start training, and click `stop` to stop training.
-- The GUI viewer is still under development, many buttons do not have corresponding functions currently. We plan to :
-  - [ ] reload checkpoints from the pre-trained model.
-  - [ ] Complete the functions of the other vacant buttons in the GUI.
-
-
-
-### Render & Evaluation
-
-```shell
-python render.py -m output/exp-name --mode render
-python metrics.py -m output/exp-name
-```
-
-We provide several modes for rendering:
-
-- `render`: render all the test images
-- `time`: time interpolation tasks for D-NeRF dataset
-- `all`: time and view synthesis tasks for D-NeRF dataset
-- `view`: view synthesis tasks for D-NeRF dataset
-- `original`: time and view synthesis tasks for real-world dataset
-
-
-
-## Results
-
-### D-NeRF Dataset
-
-**Quantitative Results**
-
-<img src="assets/results/D-NeRF/Quantitative.jpg" alt="Image1" style="zoom:50%;" />
-
-**Qualitative Results**
-
- <img src="assets/results/D-NeRF/bouncing.gif" alt="Image1" style="zoom:25%;" />  <img src="assets/results/D-NeRF/hell.gif" alt="Image1" style="zoom:25%;" />  <img src="assets/results/D-NeRF/hook.gif" alt="Image3" style="zoom:25%;" />  <img src="assets/results/D-NeRF/jump.gif" alt="Image4" style="zoom:25%;" /> 
-
- <img src="assets/results/D-NeRF/lego.gif" alt="Image5" style="zoom:25%;" />  <img src="assets/results/D-NeRF/mutant.gif" alt="Image6" style="zoom:25%;" />  <img src="assets/results/D-NeRF/stand.gif" alt="Image7" style="zoom:25%;" />  <img src="assets/results/D-NeRF/trex.gif" alt="Image8" style="zoom:25%;" /> 
-
-**400x400 Resolution**
-
-|          | PSNR  | SSIM   | LPIPS (VGG) | FPS  | Mem   | Num. (k) |
-| -------- | ----- | ------ | ----------- | ---- | ----- | -------- |
-| bouncing | 41.46 | 0.9958 | 0.0046      | 112  | 13.16 | 55622    |
-| hell     | 42.11 | 0.9885 | 0.0153      | 375  | 3.72  | 15733    |
-| hook     | 37.77 | 0.9897 | 0.0103      | 128  | 11.74 | 49613    |
-| jump     | 39.10 | 0.9930 | 0.0090      | 217  | 6.81  | 28808    |
-| mutant   | 43.73 | 0.9969 | 0.0029      | 124  | 11.45 | 48423    |
-| standup  | 45.38 | 0.9967 | 0.0032      | 210  | 5.94  | 25102    |
-| trex     | 38.40 | 0.9959 | 0.0041      | 85   | 18.6  | 78624    |
-| Average  | 41.14 | 0.9938 | 0.0070      | 179  | 10.20 | 43132    |
-
-### NeRF-DS Dataset
-
-<img src="assets/results/NeRF-DS/Quantitative.jpg" alt="Image1" style="zoom:50%;" />
-
-See more visualization on our [project page](https://ingra14m.github.io/Deformable-Gaussians/).
-
-
-
-### HyperNeRF Dataset
-
-Since the **camera pose** in HyperNeRF is less precise compared to NeRF-DS, we use HyperNeRF as a reference for partial visualization and the display of Failure Cases, but do not include it in the calculation of quantitative metrics. The results of the HyperNeRF dataset can be viewed on the [project page](https://ingra14m.github.io/Deformable-Gaussians/).
-
-
-
-### Real-Time Viewer
-
-https://github.com/ingra14m/Deformable-3D-Gaussians/assets/63096187/ec26d0b9-c126-4e23-b773-dcedcf386f36
-
-
-
-## Acknowledgments
-
-We sincerely thank the authors of [3D-GS](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/), [D-NeRF](https://www.albertpumarola.com/research/D-NeRF/index.html), [HyperNeRF](https://hypernerf.github.io/), [NeRF-DS](https://jokeryan.github.io/projects/nerf-ds/), and [DeVRF](https://jia-wei-liu.github.io/DeVRF/), whose codes and datasets were used in our work. We thank [Zihao Wang](https://github.com/Alen-Wong) for the debugging in the early stage, preventing this work from sinking. We also thank the reviewers and AC for not being influenced by PR, and fairly evaluating our work. This work was mainly supported by ByteDance MMLab.
-
-
-
-
-## BibTex
+### Evaluation
 
 ```
-@article{yang2023deformable3dgs,
-    title={Deformable 3D Gaussians for High-Fidelity Monocular Dynamic Scene Reconstruction},
-    author={Yang, Ziyi and Gao, Xinyu and Zhou, Wen and Jiao, Shaohui and Zhang, Yuqing and Jin, Xiaogang},
-    journal={arXiv preprint arXiv:2309.13101},
-    year={2023}
-}
-```
-
-And thanks to the authors of [3D Gaussians](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) for their excellent code, please consider also cite this repository:
 
 ```
-@Article{kerbl3Dgaussians,
-      author       = {Kerbl, Bernhard and Kopanas, Georgios and Leimk{\"u}hler, Thomas and Drettakis, George},
-      title        = {3D Gaussian Splatting for Real-Time Radiance Field Rendering},
-      journal      = {ACM Transactions on Graphics},
-      number       = {4},
-      volume       = {42},
-      month        = {July},
-      year         = {2023},
-      url          = {https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/}
-}
+
+## **⭐️ Key Highlights of PhysGaia**
+
+- **💥 Multi-body interaction**
+- **💎 Various materials** across all modalities
+    - Liquid, Gas, Viscoelastic substance, and Textile
+- **✏️ Physical evaluation**
+    - physics parameters
+    - ground-truth 3D trajectories
+- **😀 Research friendly!!**
+    - Providing codes for recent Dynamic Novel View Synthesis (DyNVS) models
+        - [Shape-of-motion](https://github.com/mjmjeong/PhysGaia/tree/SOM), [4DGS](https://github.com/mjmjeong/PhysGaia/tree/4DGS_hex), [STG](https://github.com/mjmjeong/PhysGaia/tree/spacetime), [D-3DGS](https://github.com/mjmjeong/PhysGaia/tree/deformable)
+    - Supporting **diverse training setting**: both monocular & multiview reconstruction
+
+## **🔥 Ideal for “Next” Research**
+
+- 🧠 **Physical reasoning in dynamic scenes**
+    - Offering ground-truth physics parameters for precise evaluation of inverse physics estimation
+    - Offering ground-truth 3D trajectories for assessing actual motion beyond photorealism.
+- 🤝 **Multi-body physical interaction modeling**
+- 🧪 **Material-specific physics solver integration**
+- 🧬 **Compatibility with existing DyNVS models**
+
+## **📂 Dataset Structure**
+
+Each folder is corresponding to each scene, containing the following files:
+
+```bash
+{material_type}_{scene_name}.zip
+│
+├── render/                              # Rendered images
+│   ├── train/                           # Images for training
+│   └── test/                            # Images for evaluation
+│
+├── point_cloud.ply                      # COLMAP initialization (PatchMatch & downsampling)
+├── camera_info_test.json                # Monocular camera info for test
+├── camera_info_train_mono.json          # Monocular camera info for training
+├── camera_info_train_multi.json         # Multi-view camera info for training
+│
+├── {scene_name}.hipnc                   # Houdini source file (simulation or scene setup)
+├── particles/                           # Ground-truth trajectories
+
 ```
 
+## **👩🏻‍💻 Code implementation**
+
+Please check each branch for integrated code for recent DyNVS methods.
+
+- **Shape-of-motion (arXiv 24.07):** https://github.com/mjmjeong/PhysGaia/tree/SOM
+- **4DGS (CVPR 24):** https://github.com/mjmjeong/PhysGaia/tree/4DGS_hex
+- **STG (CVPR 24):** https://github.com/mjmjeong/PhysGaia/tree/spacetime
+- **D-3DGS (CVPR 24):** https://github.com/mjmjeong/PhysGaia/tree/deformable
+
+## **💳 Citation**
+
+```bash
+TBD
+
+```
+
+## 🤝 Contributing
+
+We welcome contributions to expand the dataset (additional modality for new downstream tasks, , implementation for other models, etc.)
+
+Reach out via opening an issue/discussion in the repo.
+
+## 📬 Contact
+
+**Author**: Mijeong Kim & Gunhee Kim
+
+📧 Email: [mijeong.kim@snu.ac.kr](mailto:mijeong.kim@snu.ac.kr) & [gunhee2001@snu.ac.kr](mailto:gunhee2001@snu.ac.kr)
+
+🌐 LinkedIn: [Mijeong Kim](https://www.linkedin.com/in/mjmjeong) & [Gunhee Kim](https://www.linkedin.com/in/gunhee-kim-4072362b3/)
+
+## 🛠️ Future Plans
+
+- Update fidelity of the generated scenes
+- Add more easier scenes: providing more accessible starting points
+- Add guidelines using Houdini source files: ex) How to obtain a flow field?
+
+## **💳 License**
+
+This project is released under the Creative Commons Attribution-NonCommercial 4.0 license.
+
+*✅ Free to use, share, and adapt for non-commercial research*
