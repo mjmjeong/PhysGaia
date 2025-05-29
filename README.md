@@ -8,13 +8,14 @@ For general information about PhysGaia, please refer to the [main branch](https:
 ### Training
 
 ```
-
+python train.py -s path/to/your/physgaia/dataset -m output/exp-name --init_with_traj --num_views single --eval --test_iterations 0
 ```
 
 ### Evaluation
 
 ```
-
+python render.py -m output/exp-name --mode render
+python metrics.py -m output/exp-name
 ```
 
 ## **⭐️ Key Highlights of PhysGaia**
