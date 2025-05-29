@@ -16,7 +16,6 @@ python train.py -s path/to/your/physgaia/dataset --model_path output/exp-name --
 ```
 python render.py --model_path output/exp-name  --skip_train --configs arguments/hypernerf/default.py
 python metrics.py --model_path output/exp-name 
-
 ```
 
 ## **⭐️ Key Highlights of PhysGaia**
