@@ -1,6 +1,6 @@
 # 🌱 PhysGaia: A Physics-Aware Dataset of Multi-Body Interactions for Dynamic Novel View Synthesis
 
-This branch contains the implementation of [D-3DGS (CVPR2024)](https://shape-of-motion.github.io/](https://github.com/ingra14m/Deformable-3D-Gaussians)) using our PhysGaia dataset.
+This branch contains the implementation of [D-3DGS (CVPR2024)](https://github.com/ingra14m/Deformable-3D-Gaussians) using our PhysGaia dataset.
 For general information about PhysGaia, please refer to the [main branch](https://github.com/mjmjeong/PhysGaia).
 
 ## **💻 Getting Started with D-3DGS on PhysGaia**
