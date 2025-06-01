@@ -1,0 +1,14 @@
+*.pth
+*.npy
+*.mp4
+outputs/
+work_dirs/
+*__pycache__*
+.vscode/
+.envrc
+.bak/
+datasets/
+results/
+
+preproc/checkpoints
+preproc/checkpoints/

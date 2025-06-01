@@ -1,0 +1,62 @@
+[project]
+name = "tapnet"
+version = "0.1.0"
+description = "Tracking-Any-Point codebase from Google DeepMind."
+dependencies = [
+  "chex",
+  "jax",
+  "jaxline",
+  "optax",
+  "dm-haiku",
+  "dm-tree",
+  "typing_extensions",
+  "matplotlib",
+  "mediapy",
+  "opencv-python",
+  "einshape",
+  "ipympl",
+  "tqdm",
+]
+
+[project.optional-dependencies]
+train = [
+  "absl-py",
+  "notebook",
+  "jupyter_http_over_ws",
+  "tensorflow",
+  "tensorflow-datasets",
+  "tensorflow_graphics",
+  "kubric@git+https://github.com/google-research/kubric",
+]
+
+torch = [
+  "torch",
+  "torchvision",
+]
+tapvid3d_eval = [
+  "einops>=0.8.0",
+  "numpy>=1.25.2",
+  "absl-py>=2.1.0",
+  "tqdm>=4.66.4",
+  "pillow>=9.4.0",
+]
+tapvid3d_generation = [
+  "absl-py==2.1.0",
+  "tqdm==4.66.4",
+  "absl-py==2.1.0",
+  "tqdm==4.66.4",
+  "tensorflow==2.15.0",
+  "numpy==1.25.2",
+  "pillow==9.4.0",
+  "projectaria-tools==1.5.2",
+  "visu3d==1.5.3",
+  "torch==2.3.0",
+  "torchvision==0.18.0",
+  "etils==1.7.0",
+  "tensorflow-datasets",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]  # list of folders that contain the packages (["."] by default)
+include = ["tapnet*"]  # package names should match these glob patterns (["*"] by default)
+
