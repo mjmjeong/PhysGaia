@@ -2,8 +2,9 @@ import os
 import os.path as osp
 from dataclasses import dataclass
 from functools import partial
-from typing import Literal, cast
+from typing import Literal, cast, Optional
 from pathlib import Path
+import fnmatch
 
 import cv2
 import imageio
@@ -69,12 +70,15 @@ class CustomDataConfig:
         "depth_anything_v2",
         "unidepth_disp",
     ] = "aligned_depth_anything"
-    camera_type: Literal["droid_recon", "megasam"] = "megasam"
+    camera_type: Literal["droid_recon", "megasam", "camera_json"] = "megasam"
     track_2d_type: Literal["bootstapir", "tapir"] = "bootstapir"
+    camera_json_path: Optional[str] = None
     mask_erosion_radius: int = 7
     scene_norm_dict: tyro.conf.Suppress[SceneNormDict | None] = None
     num_targets_per_frame: int = 4
     load_from_cache: bool = False
+    matching_pattern: str = "*"
+
 
 
 class CasualDataset(BaseDataset):
@@ -93,12 +97,14 @@ class CasualDataset(BaseDataset):
             "depth_anything_v2",
             "unidepth_disp",
         ] = "aligned_depth_anything",
-        camera_type: Literal["droid_recon", "megasam"] = "megasam",
+        camera_type: Literal["droid_recon", "megasam", "camera_json"] = "megasam",
         track_2d_type: Literal["bootstapir", "tapir"] = "bootstapir",
+        camera_json_path: Optional[str] = None,
         mask_erosion_radius: int = 3,
         scene_norm_dict: SceneNormDict | None = None,
         num_targets_per_frame: int = 4,
         load_from_cache: bool = False,
+        matching_pattern: str = "*",
         **_,
     ):
         super().__init__()
@@ -118,7 +124,17 @@ class CasualDataset(BaseDataset):
         self.mask_dir = f"{data_dir}/{mask_type}/{res}"
         self.tracks_dir = f"{data_dir}/{track_2d_type}/{res}"
         self.cache_dir = f"{data_dir}/flow3d_preprocessed/{res}"
+
         frame_names = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.img_dir))]
+
+        # Apply matching pattern to filter frame names
+        if matching_pattern != "*":
+            # Use fnmatch to filter frame names by pattern
+            filtered_frame_names = []
+            for frame_name in frame_names:
+                if fnmatch.fnmatch(frame_name, matching_pattern):
+                    filtered_frame_names.append(frame_name)
+            frame_names = filtered_frame_names
 
         if end == -1:
             end = len(frame_names)
@@ -150,7 +166,17 @@ class CasualDataset(BaseDataset):
             c2ws = torch.from_numpy(c2ws)
             w2cs = torch.linalg.inv(c2ws)
             Ks = torch.from_numpy(K).unsqueeze(0).repeat((c2ws.shape[0], 1, 1))
-                
+
+
+        elif camera_type == "camera_json":
+            if camera_json_path is None:
+                raise ValueError("camera_json_path must be provided when camera_type is 'camera_json'")
+            
+            img_files = [f"{name}{self.img_ext}" for name in frame_names]
+            w2cs, Ks, tstamps = load_camera_params_from_json(camera_json_path, img_files, self.img_dir)
+            
+            assert len(w2cs) == len(frame_names), f"Camera params length {len(w2cs)} != frame names length {len(frame_names)}"
+
         else:
             raise ValueError(f"Unknown camera type: {camera_type}")
 
@@ -223,7 +249,7 @@ class CasualDataset(BaseDataset):
 
     def get_depth(self, index) -> torch.Tensor:
         if self.depths[index] is None:
-            if self.camera_type == "droid_recon":
+            if self.camera_type == "droid_recon" or self.camera_type == "camera_json":
                 self.depths[index] = self.load_depth(index)
             elif self.camera_type == "megasam":
                 data_name = self.data_dir.split("/")[-1]
@@ -231,12 +257,15 @@ class CasualDataset(BaseDataset):
                 depths = np.load(depth_path)
                 self.depths[index] = torch.tensor(depths["depths"][index]).float()
                
-                
+        
         return self.depths[index] / self.scale
 
     def load_image(self, index) -> torch.Tensor:
         path = f"{self.img_dir}/{self.frame_names[index]}{self.img_ext}"
-        return torch.from_numpy(imageio.imread(path)).float() / 255.0
+        img = imageio.imread(path)
+        if img.ndim == 3 and img.shape[2] == 4:
+            img = img[:, :, :3]
+        return torch.from_numpy(img).float() / 255.0
 
     def load_mask(self, index) -> torch.Tensor:
         path = f"{self.mask_dir}/{self.frame_names[index]}.png"
@@ -490,6 +519,60 @@ class CasualDataset(BaseDataset):
         )[:, 0, :, 0]
         return data
 
+
+def load_camera_params_from_json(json_path, img_files, img_dir, use_width_for_focal=False):
+    import json
+    import imageio as iio
+    
+    with open(json_path, 'r') as f:
+        meta = json.load(f)
+    angle_x = meta["camera_angle_x"]
+    
+    frame_dict = {}
+    for frame in meta["frames"]:
+        file_path = frame["file_path"]  
+        image_name = os.path.basename(file_path) + ".png"
+        frame_dict[image_name] = frame
+    
+    num_imgs = len(img_files)
+    Ks = np.zeros((num_imgs, 3, 3))  # 3x3 intrinsic matrix
+    w2cs = np.zeros((num_imgs, 4, 4))  # 4x4 world-to-camera matrix
+    
+    # Process in the order of img_files to maintain consistency
+    for idx, img_file in enumerate(img_files):
+        image_name = os.path.basename(img_file)
+        
+        if image_name not in frame_dict:
+            raise ValueError(f"Image {image_name} not found in camera JSON")
+        
+        frame = frame_dict[image_name]
+        image_path = os.path.join(img_dir, image_name)
+        
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+        img = iio.imread(image_path)
+        h, w = img.shape[:2]
+        if use_width_for_focal:
+            fx = fy = 0.5 * w / np.tan(angle_x / 2)  
+        else:
+            fx = fy = 0.5 * h / np.tan(angle_x / 2)
+        cx, cy = w / 2, h / 2
+        
+        K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])  # 3x3 matrix
+        Ks[idx] = K
+        
+        T_c2w = np.array(frame["transform_matrix"])
+        flip = np.diag([1, -1, -1, 1])
+        T_c2w_cv = T_c2w @ flip
+        T_w2c = np.linalg.inv(T_c2w_cv)
+        w2cs[idx] = T_w2c
+    
+    tstamps = np.arange(num_imgs, dtype=np.int32)
+    return (
+        torch.from_numpy(w2cs).float(),
+        torch.from_numpy(Ks).float(),
+        torch.from_numpy(tstamps),
+    )
 
 def load_cameras(
     path: str, H: int, W: int

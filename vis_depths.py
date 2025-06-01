@@ -9,7 +9,7 @@ from loguru import logger as guru
 from tqdm import tqdm
 from viser import transforms as vtf
 
-from flow3d.data import DavisDataConfig, get_train_val_datasets, iPhoneDataConfig
+from flow3d.data import DavisDataConfig, get_train_val_datasets, iPhoneDataConfig, CustomDataConfig
 from flow3d.vis.utils import get_server
 
 
@@ -17,6 +17,7 @@ def main(
     data: Union[
         Annotated[iPhoneDataConfig, tyro.conf.subcommand(name="iphone")],
         Annotated[DavisDataConfig, tyro.conf.subcommand(name="davis")],
+        Annotated[CustomDataConfig, tyro.conf.subcommand(name="custom")],
     ],
     port: int = 8890,
 ):
