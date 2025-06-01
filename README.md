@@ -52,10 +52,49 @@ python preprocess_pipeline.py \
     --img_name "test" \
 ```
 
-### Training
 
+#### Output Structure
+
+After preprocessing, your directory structure will look like:
+```
+/path/to/FLIP/ship/
+├── render/
+│   ├── train/          # Original training images
+│   └── test/           # Original test images
+├── masks/
+│   ├── train/          # Generated object masks
+│   └── test/
+├── depth_anything_v2/
+│   ├── train/          # Raw depth maps
+│   └── test/
+├── aligned_depth_anything_v2/
+│   ├── train/          # Aligned depth maps
+│   └── test/
+├── bootstapir/
+│   ├── train/          # 2D tracks
+│   └── test/
+├── droid_recon/
+│   ├── train/          # SLAM reconstruction
+│   └── test/
+└── point_cloud.ply     # 3D point cloud
 ```
 
+
+### Training
+Train the model on a preprocessed PhysGaia scene:
+
+```bash
+python run_training.py \
+  --work-dir ./outputs/torus_experiment \
+  data:custom \
+  --data.data-dir /path/to/FLIP/torus_falling_into_water \
+  --data.res train \
+  --data.image-type render \
+  --data.depth-type aligned_depth_anything_v2 \
+  --data.camera-type camera_json \
+  --data.camera-json-path /path/to/FLIP/torus_falling_into_water/camera_info_train_mono.json \
+  --data.track-2d-type bootstapir \
+  --data.matching-pattern "0_*"
 ```
 
 ### Evaluation
