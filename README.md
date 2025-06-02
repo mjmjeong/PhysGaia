@@ -37,7 +37,7 @@ CUDA_VISIBLE_DEVICES=0 python mask_app.py \
 
 **2. Process training data**
 ```bash
-python preprocess_pipeline.py \
+python process_physgaia.py \
     --img_dirs "/path/to/FLIP/ship/render/train" "/path/to/Vellum/flags/render/train" \
     --gpus 0 1 \
     --img_name "train" \
@@ -46,7 +46,7 @@ python preprocess_pipeline.py \
 
 **3. Process test data**
 ```bash
-python preprocess_pipeline.py \
+python process_physgaia.py \
     --img_dirs "/path/to/FLIP/ship/render/test" "/path/to/Vellum/flags/render/test" \
     --gpus 0 1 \
     --img_name "test" \
@@ -100,7 +100,12 @@ python run_training.py \
 ### Evaluation
 
 ```
-
+python eval.py \
+  --work-dir ./outputs/ship_experiment \
+  --data-dir /path/to/FLIP/ship \
+  --camera-json /path/to/FLIP/ship/camera_info_test.json \
+  --output-dir ./outputs/ship_experiment/eval_test \
+  --res test 
 ```
 
 ## **⭐️ Key Highlights of PhysGaia**

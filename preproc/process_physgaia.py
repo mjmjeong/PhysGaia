@@ -131,7 +131,7 @@ def process_sequence(
     slam_cmd = (
         f"{dev_arg} python recon_with_depth.py --img_dir {img_dir} "
         f"--calib {camera_json_path if camera_json_path else intrins_name + '.json'} "
-        f"--depth_dir {aligned_depth_dir} --out_path {slam_path}, --matching_pattern {matching_pattern}"
+        f"--depth_dir {aligned_depth_dir} --out_path {slam_path} --matching_pattern {matching_pattern}"
     )
     print(f"[GPU {gpu}] {slam_cmd}")
     subprocess.call(slam_cmd, shell=True, executable="/bin/bash")
