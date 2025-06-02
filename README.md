@@ -83,13 +83,6 @@ We welcome contributions to expand the dataset (additional modality for new down
 
 Reach out via opening an issue/discussion in the repo.
 
-## 📬 Contact
-
-**Author**: Mijeong Kim & Gunhee Kim
-
-📧 Email: [mijeong.kim@snu.ac.kr](mailto:mijeong.kim@snu.ac.kr) & [gunhee2001@snu.ac.kr](mailto:gunhee2001@snu.ac.kr)
-
-🌐 LinkedIn: [Mijeong Kim](https://www.linkedin.com/in/mjmjeong) & [Gunhee Kim](https://www.linkedin.com/in/gunhee-kim-4072362b3/)
 
 ## 🛠️ Future Plans
 
