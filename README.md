@@ -1,11 +1,13 @@
 # 🌱 PhysGaia: A Physics-Aware Dataset of Multi-Body Interactions for Dynamic Novel View Synthesis
 
-## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | Project Page | arXiv Paper
+## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | arXiv Paper
 
-> [Mijeong Kim](https://mjmjeong.github.io/)\*, Gunhee Kim\*, Jungyoon Choi, Wonjae Roh, [Bohyung Han](https://cv.snu.ac.kr/index.php/bhhan/) 
-\*Equal Contributions
+[Mijeong Kim](https://mjmjeong.github.io/)\*, Gunhee Kim\*, Jungyoon Choi, Wonjae Roh, [Bohyung Han](https://cv.snu.ac.kr/index.php/bhhan/)
+
 Seoul National University
-> 
+
+*Equal Contributions
+ 
 
 ## **⭐️ Key Highlights**
 
@@ -49,7 +51,7 @@ Each folder is corresponding to each scene, containing the following files:
 ├── particles/                           # Ground-truth trajectories
 ```
 
-## **👩🏻‍💻 Code implementation**
+## **👩🏻‍💻 Code Implementation**
 
 Please check each branch for integrated code for recent DyNVS methods. 
 
