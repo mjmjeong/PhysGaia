@@ -239,7 +239,7 @@ def main():
             print(f'Processed {i}/{len(frames)} frames')
 
     # Render and save image
-    bg_path = os.path.join(args.input_dir, 'render', 'test/00158.png')
+    bg_path = os.path.join(args.input_dir, 'render', 'smoke_box_4dgs.png')
     bg = cv2.imread(bg_path)
     if bg is None:
         raise RuntimeError(f'Could not load background at {bg_path}')
@@ -255,10 +255,10 @@ def main():
                 prev = pt
             else:
                 prev = None
-        if prev is not None:
+        """if prev is not None:
             cv2.drawMarker(output, prev, color,
                            markerType=cv2.MARKER_CROSS,
-                           markerSize=10, thickness=5)
+                           markerSize=10, thickness=5)"""
 
     cv2.imwrite(args.output_image, output)
     print(f'Saved trajectory image to {args.output_image}')
