@@ -85,14 +85,14 @@ Train the model on a preprocessed PhysGaia scene:
 
 ```bash
 python run_training.py \
-  --work-dir ./outputs/torus_experiment \
+  --work-dir ./outputs/ship_experiment \
   data:custom \
-  --data.data-dir /path/to/FLIP/torus_falling_into_water \
+  --data.data-dir /path/to/FLIP/ship \
   --data.res train \
   --data.image-type render \
   --data.depth-type aligned_depth_anything_v2 \
   --data.camera-type camera_json \
-  --data.camera-json-path /path/to/FLIP/torus_falling_into_water/camera_info_train_mono.json \
+  --data.camera-json-path /path/to/FLIP/ship/camera_info_train_mono.json \
   --data.track-2d-type bootstapir \
   --data.matching-pattern "0_*"
 ```
