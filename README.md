@@ -2,11 +2,6 @@
 
 ## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | arXiv Paper
 
-[Mijeong Kim](https://mjmjeong.github.io/)\*, Gunhee Kim\*, Jungyoon Choi, Wonjae Roh, [Bohyung Han](https://cv.snu.ac.kr/index.php/bhhan/)
-
-Seoul National University
-
-*Equal Contributions
  
 
 ## **⭐️ Key Highlights**
