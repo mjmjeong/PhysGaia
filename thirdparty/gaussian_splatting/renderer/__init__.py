@@ -277,13 +277,13 @@ def test_ours_full_fused(viewpoint_camera, pc : GaussianModel, pipe, bg_color : 
     # INTER_CUBIC
     rendered_image = rendered_image.squeeze(0)
 
-
+    recompute_means3D = pc.get_xyz +  pc._motion[:, 0:3] * tforpoly + pc._motion[:, 3:6] * tforpoly * tforpoly + pc._motion[:, 6:9] * tforpoly *tforpoly * tforpoly
     return {"render": rendered_image,
             "viewspace_points": screenspace_points,
             "visibility_filter" : radii > 0,
             "radii": radii,
             "rawrendered_image": rendered_image,
-            "means3D": pc.get_xyz,
+            "means3D": recompute_means3D,
             "opacity": pc.computedopacity,
              "duration": duration}
 
