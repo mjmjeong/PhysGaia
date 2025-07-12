@@ -37,7 +37,6 @@ Each folder is corresponding to each scene, containing the following files:
 │   ├── train/                           # Images for training
 │   └── test/                            # Images for evaluation
 │
-├── point_cloud.ply                      # COLMAP initialization (PatchMatch & downsampling)
 ├── camera_info_test.json                # Monocular camera info for test
 ├── camera_info_train_mono.json          # Monocular camera info for training
 ├── camera_info_train_multi.json         # Multi-view camera info for training
@@ -46,6 +45,7 @@ Each folder is corresponding to each scene, containing the following files:
 ├── particles/                           # Ground-truth trajectories
 ```
 
+For the COLMAP initialization files, please check this [drive](https://drive.google.com/drive/folders/143eGDwJmsn1j7J24XTGVB7xJgH_Z_TOM?usp=drive_link).
 ## **👩🏻‍💻 Code Implementation**
 
 Please check each branch for integrated code for recent DyNVS methods. 
