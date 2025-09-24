@@ -11,6 +11,7 @@ from mosca_evaluate import test_tum_cam, test_sintel_cam
 
 from data_utils.iphone_helpers import load_iphone_gt_poses
 from data_utils.nvidia_helpers import load_nvidia_gt_pose, get_nvidia_dummy_test
+from data_utils.physgaia_helpers import load_physgaia_gt_poses
 
 from recon_utils import (
     seed_everything,
@@ -46,6 +47,38 @@ def load_gt_cam(ws, fit_cfg):
             gt_training_fov,
             gt_testing_fov_list,
             gt_training_cxcy_ratio,
+            gt_testing_cxcy_ratio_list,
+        )
+    elif mode == "physgaia":
+        camera_json_path = getattr(fit_cfg, "camera_json_path", 
+                                  osp.join(ws, "camera_info_test.json"))
+                                  
+        camera_train_json_path = getattr(fit_cfg, "camera_train_json_path", 
+                                       osp.join(ws, "camera_info_train.json"))
+        test_dir = getattr(fit_cfg, "test_dir", 
+                          osp.join(ws, "render/test"))
+        target_scene_id = getattr(fit_cfg, "target_scene_id", None) 
+
+        (
+            gt_training_cam_T_wi,
+            gt_testing_cam_T_wi_list,
+            gt_testing_tids_list,
+            gt_testing_fns_list,
+            gt_training_fov,
+            gt_testing_fov_list,
+            _,
+            gt_testing_cxcy_ratio_list,
+        ) = load_physgaia_gt_poses(ws, camera_json_path, test_dir, 
+                           camera_train_json_path, target_scene_id)
+        
+        return (
+            gt_training_cam_T_wi,
+            gt_testing_cam_T_wi_list,
+            gt_testing_tids_list,
+            gt_testing_fns_list,
+            gt_training_fov,
+            gt_testing_fov_list,
+            _,
             gt_testing_cxcy_ratio_list,
         )
     else:

@@ -12,6 +12,7 @@ from lib_mosca.static_gs import StaticGaussian
 
 from eval_utils.eval_nvidia import eval_nvidia_dir
 from eval_utils.eval_dyncheck import eval_dycheck
+from eval_utils.eval_physgaia import eval_physgaia_dir
 from eval_utils.eval_sintel_cam import eval_sintel_campose
 from eval_utils.eval_tum_cam import eval_metrics as eval_tum_campose
 from eval_utils.eval_tum_cam import c2w_to_tumpose, load_traj as load_tum_traj
@@ -23,6 +24,7 @@ import imageio
 from omegaconf import OmegaConf
 from data_utils.iphone_helpers import load_iphone_gt_poses
 from data_utils.nvidia_helpers import load_nvidia_gt_pose, get_nvidia_dummy_test
+from data_utils.physgaia_helpers import load_physgaia_gt_poses
 
 from lib_render.render_helper import render, render_cam_pcl
 from tqdm import tqdm
@@ -114,6 +116,8 @@ def load_gt_pck_data(gt_data_dict):
     )
 
 
+
+
 #########
 # test helper
 #########
@@ -133,10 +137,8 @@ def render_test(
     fn_list=None,
     focal=None,
     cxcy_ratio=None,
-    # cover_factor=0.3,
+    dataset_mode="iphone",
 ):
-    # prior2d: Prior2D = self.prior2d
-    # device = self.device
     device = s_model.device
 
     # first align the camera
@@ -155,7 +157,10 @@ def render_test(
     if cxcy_ratio is None:
         cxcy_ratio = cams.cxcy_ratio
 
-    L = min(H, W)
+    if dataset_mode == "physgaia":
+        L = H
+    else:
+        L = min(H, W)
     fx = focal * L / 2.0
     fy = focal * L / 2.0
     cx = W * cxcy_ratio[0]
@@ -215,6 +220,7 @@ def render_test_tto(
     initialize_from_previous_step_factor=10,
     initialize_from_previous_lr_factor=0.1,
     fg_mask_th=0.1,
+    dataset_mode="iphone",
 ):
     # * Optimize the test camera pose, nost simply do the global sim(3) alignment
     s_model.eval()
@@ -242,7 +248,10 @@ def render_test_tto(
     if cxcy_ratio is None:
         cxcy_ratio = cams.cxcy_ratio
 
-    L = min(H, W)
+    if dataset_mode == "physgaia":
+        L = H
+    else:
+        L = min(H, W)
     fx = focal * L / 2.0
     fy = focal * L / 2.0
     cx = W * cxcy_ratio[0]
@@ -369,14 +378,14 @@ def test_main(
         OmegaConf.set_readonly(cfg, True)
 
     dataset_mode = getattr(cfg, "mode", "iphone")
-    # max_sph_order = getattr(cfg, "max_sph_order", 1)
     logging.info(f"Dataset mode: {dataset_mode}")
 
     ######################################################################
     ######################################################################
 
     cams = MonocularCameras.load_from_ckpt(
-        torch.load(osp.join(saved_dir, "photometric_cam.pth"))
+        torch.load(osp.join(saved_dir, "photometric_cam.pth")),
+        dataset_mode=dataset_mode
     ).to(device)
     s_model = StaticGaussian.load_from_ckpt(
         torch.load(
@@ -454,6 +463,40 @@ def test_main(
         tto_initialize_from_previous_lr_factor = 1.0
         tto_fg_mask_th = 0.1
 
+    elif dataset_mode == "physgaia":  
+        camera_json_path = getattr(cfg, "camera_json_path", 
+                                  osp.join(data_root, "camera_info_test.json"))
+                                  
+        camera_train_json_path = getattr(cfg, "camera_train_json_path", 
+                                       osp.join(data_root, "camera_info_train.json"))
+        test_dir = getattr(cfg, "test_dir", 
+                          osp.join(data_root, "render/test"))
+        target_scene_id = getattr(cfg, "target_scene_id", None) 
+        (
+            gt_training_cam_T_wi,        
+            gt_testing_cam_T_wi_list,
+            gt_testing_tids_list,
+            gt_testing_fns_list,
+            gt_training_fov,
+            gt_testing_fov_list,
+            _,
+            gt_testing_cxcy_ratio_list,
+        ) = load_physgaia_gt_poses(data_root, camera_json_path, test_dir, 
+                           camera_train_json_path, target_scene_id)
+
+        gt_dir = test_dir
+        print("Using GT training poses for accurate alignment")
+        
+        tto_steps = getattr(cfg, "tto_steps", 100)
+        decay_start = getattr(cfg, "tto_decay_start", 30)
+        lr_p = getattr(cfg, "tto_lr_p", 0.0003)
+        lr_q = getattr(cfg, "tto_lr_q", 0.0003)
+        lr_final = getattr(cfg, "tto_lr_final", 0.000001)
+        sgd_flag = False
+
+        tto_initialize_from_previous_step_factor = 10
+        tto_initialize_from_previous_lr_factor = 0.1
+        tto_fg_mask_th = 0.1
     else:
         raise ValueError(
             f"Unknown dataset mode: {dataset_mode}, shouldn't call test funcs"
@@ -503,6 +546,7 @@ def test_main(
                     initialize_from_previous_step_factor=tto_initialize_from_previous_step_factor,
                     initialize_from_previous_lr_factor=tto_initialize_from_previous_lr_factor,
                     fg_mask_th=tto_fg_mask_th,
+                    dataset_mode=dataset_mode,
                 )
                 imageio.mimsave(
                     osp.join(saved_dir, f"tto_test_cam{test_i}.mp4"), frames
@@ -521,6 +565,7 @@ def test_main(
                     fn_list=gt_testing_fns_list[test_i],
                     focal=testing_focal,
                     cxcy_ratio=gt_testing_cxcy_ratio_list[test_i],
+                    dataset_mode=dataset_mode,
                 )
                 imageio.mimsave(osp.join(saved_dir, f"test_cam{test_i}.mp4"), frames)
 
@@ -545,19 +590,41 @@ def test_main(
             report_dir=osp.join(saved_dir, f"{eval_prefix}test_report"),
         )
 
+    elif dataset_mode == "physgaia":  
+        target_scene_id = getattr(cfg, "target_scene_id", 1) 
+        
+        logging.info(f"Evaluating PhysGaia dataset for scene {target_scene_id}...")
+        
+        try:
+            ave_psnr, ave_ssim, ave_lpips = eval_physgaia_dir(
+                gt_dir=gt_dir,
+                pred_dir=osp.join(saved_dir, f"{eval_prefix}test"),
+                report_dir=osp.join(saved_dir, f"{eval_prefix}physgaia_test_report"),
+                target_scene_id=target_scene_id
+            )
+            
+            logging.info(f"PhysGaia Scene {target_scene_id} Evaluation Results:")
+            logging.info(f"  PSNR: {ave_psnr:.6f}")
+            logging.info(f"  SSIM: {ave_ssim:.6f}")
+            logging.info(f"  LPIPS: {ave_lpips:.6f}")
+            
+        except Exception as e:
+            logging.error(f"PhysGaia evaluation failed: {e}")
+            
     logging.info(f"Finished, saved to {saved_dir}")
     return
 
 
 @torch.no_grad()
-def test_pck(saved_dir, gt_npz_fn, device, save_fn=None):
+def test_pck(saved_dir, gt_npz_fn, device, save_fn=None, dataset_mode="iphone"):
     # laod gt
     src, dst_gt, src_t, dst_t, img_wh, ratio = load_gt_pck_data(
         np.load(gt_npz_fn, allow_pickle=True)["arr_0"]
     )
 
     cams = MonocularCameras.load_from_ckpt(
-        torch.load(osp.join(saved_dir, "photometric_cam.pth"))
+        torch.load(osp.join(saved_dir, "photometric_cam.pth")),
+        dataset_mode=dataset_mode
     ).to(device)
     s_model = StaticGaussian.load_from_ckpt(
         torch.load(
@@ -642,7 +709,7 @@ def test_pck(saved_dir, gt_npz_fn, device, save_fn=None):
 
 
 def test_sintel_cam(cam_pth_fn, ws, save_path="sintel_pose_metrics.txt"):
-    cams = MonocularCameras.load_from_ckpt(torch.load(cam_pth_fn))
+    cams = MonocularCameras.load_from_ckpt(torch.load(cam_pth_fn), dataset_mode="sintel")
     pose_est = cams.T_wc_list().detach().cpu().numpy()
     # gt_dir = osp.join("./data/robust_dynrf/results/Sintel", sq)
     gt_dir = osp.join(ws, "gt_cameras")
@@ -660,7 +727,7 @@ def test_sintel_cam(cam_pth_fn, ws, save_path="sintel_pose_metrics.txt"):
 
 def test_tum_cam(cam_pth_fn, ws, save_path="tum_pose_metrics.txt"):
 
-    cams = MonocularCameras.load_from_ckpt(torch.load(cam_pth_fn))
+    cams = MonocularCameras.load_from_ckpt(torch.load(cam_pth_fn), dataset_mode="tum")
     pose_est = cams.T_wc_list().detach().cpu().numpy()
     tt = np.arange(len(pose_est)).astype(float)
     tum_poses = [c2w_to_tumpose(p) for p in pose_est]
@@ -686,9 +753,10 @@ def test_tum_cam(cam_pth_fn, ws, save_path="tum_pose_metrics.txt"):
     return ate, rpe_trans, rpe_rot
 
 
-def test_fps(saved_dir, rounds=1, device=torch.device("cuda:0")):
+def test_fps(saved_dir, rounds=1, device=torch.device("cuda:0"), dataset_mode="iphone"):
     cams = MonocularCameras.load_from_ckpt(
-        torch.load(osp.join(saved_dir, "photometric_cam.pth"))
+        torch.load(osp.join(saved_dir, "photometric_cam.pth")),
+        dataset_mode=dataset_mode
     ).to(device)
     s_model = StaticGaussian.load_from_ckpt(
         torch.load(

@@ -253,9 +253,24 @@ def align_disparity_to_metric_depth(
     # plot to ndarray
     fig = plt.gcf()
     fig.canvas.draw()
-    plot = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(
-        fig.canvas.get_width_height()[::-1] + (3,)
-    )
+    # plot = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(
+    #     fig.canvas.get_width_height()[::-1] + (3,)
+    # )
+
+    try:
+        plot = np.frombuffer(fig.canvas.tobytes(), dtype=np.uint8).reshape(
+            fig.canvas.get_width_height()[::-1] + (4,)  # RGBA
+        )[..., :3]  # Use RGB only
+    except AttributeError:
+        try:
+            plot = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(
+                fig.canvas.get_width_height()[::-1] + (3,)
+            )
+        except AttributeError:
+            plot = np.frombuffer(fig.canvas.tostring_argb(), dtype=np.uint8).reshape(
+                fig.canvas.get_width_height()[::-1] + (4,)
+            )[..., 1:4] 
+
     plt.close()
     # import imageio
     # imageio.imsave("./debug/dbg.jpg", plot)

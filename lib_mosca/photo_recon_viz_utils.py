@@ -473,7 +473,7 @@ def viz2d_one_frame(
 
 
 @torch.no_grad()
-def make_viz_graph(d_model, view_ind, cams, view_cam_id=None, max_radius=0.001):
+def make_viz_graph(d_model, view_ind, cams, view_cam_id=None, max_radius=0.001, dataset_mode="iphone"):
     node_mu_w = d_model.scf._node_xyz[d_model.get_tlist_ind(view_ind)]
     if view_cam_id is None:
         render_cam_id = view_ind
@@ -492,7 +492,11 @@ def make_viz_graph(d_model, view_ind, cams, view_cam_id=None, max_radius=0.001):
     c_wb = torch.from_numpy(cm.viridis(acc_w_binary)[:, :3]).to(node_mu)
 
     H, W = cams.default_H, cams.default_W
-    pf = cams.rel_focal.mean() / 2 * min(H, W)
+    if cams.dataset_mode == "physgaia":
+        L = H
+    else:
+        L = min(H, W)
+    pf = cams.rel_focal.mean() / 2 * L
 
     viz_frames = []
     # for color in [c_id, c_time, c_w]:
@@ -1443,6 +1447,7 @@ def viz_scene(
     bg_color=[1.0, 1.0, 1.0],
     draw_camera_frames=False,
     return_full=False,
+    dataset_mode="iphone",
 ):
     # auto select viewpoint
     # manually add the camera viz to to
@@ -1501,7 +1506,11 @@ def viz_scene(
         viz_mu = torch.einsum("ij,nj->ni", viz_cam_R_cw, mu_w) + viz_cam_t_cw[None]
         viz_fr = torch.einsum("ij,njk->nik", viz_cam_R_cw, fr_w)
 
-        pf = viz_f / 2 * min(H, W)
+        if dataset_mode == "physgaia":
+            L = H
+        else:
+            L = min(H, W)
+        pf = viz_f / 2 * L
         render_dict = render_cam_pcl(
             viz_mu, viz_fr, s, o, sph, H=H, W=W, fx=pf, bg_color=bg_color
         )

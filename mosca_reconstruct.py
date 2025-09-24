@@ -93,7 +93,8 @@ def photometric_warmup(ws, log_path, fit_cfg):
     )
     s2d = set_epi_mask_to_s2d_for_bg_render(s2d, EPI_TH, device)
     cams: MonocularCameras = MonocularCameras.load_from_ckpt(
-        torch.load(osp.join(log_path, "bundle", "bundle_cams.pth"))
+        torch.load(osp.join(log_path, "bundle", "bundle_cams.pth")),
+        dataset_mode=getattr(fit_cfg, "mode", "iphone")
     ).to(device)
 
     photo_solver = DynReconstructionSolver(
@@ -270,7 +271,8 @@ def scaffold_reconstruct(ws, log_path, fit_cfg):
         )
 
     cams: MonocularCameras = MonocularCameras.load_from_ckpt(
-        torch.load(osp.join(log_path, "bundle", "bundle_cams.pth"))
+        torch.load(osp.join(log_path, "bundle", "bundle_cams.pth")),
+        dataset_mode=getattr(fit_cfg, "mode", "iphone")
     ).to(device)
 
     sub_t_list = [
@@ -300,6 +302,7 @@ def scaffold_reconstruct(ws, log_path, fit_cfg):
         refilter_remove_shaking_curve=getattr(
             fit_cfg, "get_curve_refilter_remove_shaking_curve", True
         ),
+        dataset_mode=getattr(fit_cfg, "mode", "iphone"),
         enforce_line_init=getattr(
             fit_cfg, "get_curve_enforce_line_init", False
         ),  # for spatracker sometime set True is better, because spatracker invisible 3D posotion is not reliable
@@ -490,7 +493,8 @@ def photometric_reconstruct(ws, log_path, fit_cfg):
     )
 
     cams: MonocularCameras = MonocularCameras.load_from_ckpt(
-        torch.load(osp.join(log_path, "bundle", "bundle_cams.pth"))
+        torch.load(osp.join(log_path, "bundle", "bundle_cams.pth")),
+        dataset_mode=getattr(fit_cfg, "mode", "iphone")
     ).to(device)
     scaffold = MoSca.load_from_ckpt(
         torch.load(osp.join(log_path, "mosca", "mosca.pth"))
@@ -634,8 +638,8 @@ def photometric_reconstruct(ws, log_path, fit_cfg):
         geo_reg_start_steps=getattr(fit_cfg, "photo_geo_reg_start_steps", 0),
         optimizer_cfg=OptimCFG(
             lr_cam_f=0.0,
-            lr_cam_q=0.00003,
-            lr_cam_t=0.00003,
+            lr_cam_q=0.0000,
+            lr_cam_t=0.0000,
             # gs
             lr_p=getattr(fit_cfg, "photo_lr_p", 0.00016),
             lr_q=getattr(fit_cfg, "photo_lr_q", 0.001),

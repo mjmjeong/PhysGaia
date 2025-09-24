@@ -552,10 +552,13 @@ def fovdeg2focal(fov_deg):
     return focal
 
 
-def track2undistroed_homo(track, H, W):
+def track2undistroed_homo(track, H, W, dataset_mode="iphone"):
     # the short side is -1,1, the long side may exceed
     H, W = float(H), float(W)
-    L = min(H, W)
+    if dataset_mode == "physgaia":
+        L = H
+    else:
+        L = min(H, W) 
     u, v = track[..., 0], track[..., 1]
     u = 2.0 * u / L - W / L
     v = 2.0 * v / L - H / L

@@ -26,12 +26,14 @@ class MonocularCameras(nn.Module):
         init_camera_pose=None,  # either T_wc in indep model; or T_i(i+1) in delta model
         # * cam flag
         iso_focal=False,
+        dataset_mode=None,  # for PhysGaia special handling
     ) -> None:
         super().__init__()
 
         self.T = n_time_steps
         self.register_buffer("delta_flag", torch.tensor(delta_flag))
         self.register_buffer("iso_focal", torch.tensor(iso_focal))
+        self.dataset_mode = dataset_mode
 
         rel_focal, cxcy_ratio = self.__get_init_fc__(
             fxfycxcy, None if K is None else [K, default_H, default_W]
@@ -59,7 +61,7 @@ class MonocularCameras(nn.Module):
         return self.T
 
     @classmethod
-    def load_from_ckpt(cls, ckpt):
+    def load_from_ckpt(cls, ckpt, dataset_mode=None):
         logging.info("Load camera from checkpoint")
         H = ckpt["default_H"]
         W = ckpt["default_W"]
@@ -76,7 +78,7 @@ class MonocularCameras(nn.Module):
             ckpt["_rel_focal"] = ckpt["rel_focal"]
             del ckpt["rel_focal"]
         T = len(ckpt["q_wc"])
-        cams = cls(n_time_steps=T, default_H=H, default_W=W, delta_flag=delta_flag)
+        cams = cls(n_time_steps=T, default_H=H, default_W=W, delta_flag=delta_flag, dataset_mode=dataset_mode)
         cams.load_state_dict(ckpt, strict=True)
         return cams
 
@@ -273,7 +275,10 @@ class MonocularCameras(nn.Module):
             return self.default_K
         else:
             assert H is not None and W is not None, "H and W must be both provided"
-        L = min(H, W)  # ! the rel means to rel to the short side
+            if self.dataset_mode == "physgaia":
+                L = H
+            else:
+                L = min(H, W)  # ! the rel means to rel to the short side
         fx = self.rel_focal[0] * L / 2.0
         fy = self.rel_focal[1] * L / 2.0
         cx = W * self.cxcy_ratio[0]

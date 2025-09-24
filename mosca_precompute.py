@@ -49,11 +49,20 @@ def get_moca_processor(pre_cfg):
     return moca_processor
 
 
-def load_imgs_from_dir(src):
-    img_dir = osp.join(src, "images")
-    img_fns = sorted(
-        [it for it in os.listdir(img_dir) if it.endswith(".png") or it.endswith(".jpg")]
-    )
+def load_imgs_from_dir(src, prefix=None, train_dir=None):
+    # If train_dir is specified in config, use it; otherwise use the default logic
+    if train_dir is not None:
+        img_dir = train_dir
+    else:
+        img_dir = osp.join(src, "images") if osp.exists(osp.join(src, "images")) else src
+    
+    all_files = [it for it in os.listdir(img_dir) if it.endswith(".png") or it.endswith(".jpg")]
+    
+    if prefix is not None:
+        img_fns = sorted([it for it in all_files if it.startswith(f"{prefix}_")])
+    else:
+        img_fns = sorted(all_files)
+    
     img_list = [imageio.imread(osp.join(img_dir, it))[..., :3] for it in img_fns]
     return img_list, img_fns
 
@@ -195,12 +204,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--skip_dynamic_resample", action="store_true", help="skip dynamic resample"
     )
+    parser.add_argument("--prefix", type=str, help="File prefix to filter (e.g., '0', '3')", default=0)
+
     args, unknown = parser.parse_known_args()
 
-    img_list, img_fns = load_imgs_from_dir(args.ws)
     prep_cfg = OmegaConf.load(args.cfg)
     cli_cfg = OmegaConf.from_dotlist([arg.lstrip('--') for arg in unknown])
     prep_cfg = OmegaConf.merge(prep_cfg, cli_cfg)
+    
+    # Check if train_dir is specified in config
+    train_dir = getattr(prep_cfg, "train_dir", None)
+    if train_dir is not None:
+        logging.info(f"Using train_dir from config: {train_dir}")
+    
+    img_list, img_fns = load_imgs_from_dir(args.ws, prefix=args.prefix, train_dir=train_dir)  
 
     moca_processor = get_moca_processor(prep_cfg)
 

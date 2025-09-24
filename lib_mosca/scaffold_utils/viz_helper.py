@@ -340,6 +340,7 @@ def viz_scene(
     bg_color=[1.0, 1.0, 1.0],
     draw_camera_frames=False,
     return_full=False,
+    dataset_mode="iphone",
 ):
     # auto select viewpoint
     # manually add the camera viz to to
@@ -397,7 +398,11 @@ def viz_scene(
         viz_mu = torch.einsum("ij,nj->ni", viz_cam_R_cw, mu_w) + viz_cam_t_cw[None]
         viz_fr = torch.einsum("ij,njk->nik", viz_cam_R_cw, fr_w)
 
-        pf = viz_f / 2 * min(H, W)
+        if dataset_mode == "physgaia":
+            L = H
+        else:
+            L = min(H, W)
+        pf = viz_f / 2 * L
         render_dict = render_cam_pcl(
             viz_mu, viz_fr, s, o, sph, H=H, W=W, fx=pf, bg_color=bg_color
         )
@@ -516,6 +521,7 @@ def viz_list_of_colored_points_in_cam_frame(
     rel_focal=1.0,
     zoom_out_factor=0.0,
     pitch_deg=30.0,
+    dataset_mode="iphone",
 ):
     # the saved momap is the 3D position in current view frame
     T = len(xyz_list)
@@ -549,7 +555,11 @@ def viz_list_of_colored_points_in_cam_frame(
         rgb = color[t].float().to(device)
 
         dep = mu_w[:, 2]
-        scale = dep / (rel_focal * min(H, W)) * 2.0
+        if dataset_mode == "physgaia":
+            L = H
+        else:
+            L = min(H, W)
+        scale = dep / (rel_focal * L) * 2.0
 
         fr = torch.eye(3)[None].expand(len(mu_w), -1, -1).to(device)
         s = scale.reshape(-1, 1).float().to(device).expand(-1, 3)
@@ -564,8 +574,8 @@ def viz_list_of_colored_points_in_cam_frame(
             sph,
             H=H,
             W=W,
-            fx=rel_focal / 2.0 * min(H, W),
-            fy=rel_focal / 2.0 * min(H, W),
+            fx=rel_focal / 2.0 * L,
+            fy=rel_focal / 2.0 * L,
             bg_color=bg_color,
         )
         _viz = render_dict["rgb"].cpu().permute(1, 2, 0).numpy() * 255

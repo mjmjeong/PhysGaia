@@ -339,6 +339,7 @@ def viz_scene(
     bg_color=[1.0, 1.0, 1.0],
     draw_camera_frames=False,
     return_full=False,
+    dataset_mode="iphone",
 ):
     # auto select viewpoint
     # manually add the camera viz to to
@@ -396,7 +397,11 @@ def viz_scene(
         viz_mu = torch.einsum("ij,nj->ni", viz_cam_R_cw, mu_w) + viz_cam_t_cw[None]
         viz_fr = torch.einsum("ij,njk->nik", viz_cam_R_cw, fr_w)
 
-        pf = viz_f / 2 * min(H, W)
+        if dataset_mode == "physgaia":
+            L = H
+        else:
+            L = min(H, W)  
+        pf = viz_f / 2 * L
         assert len(viz_mu) == len(sph)
         render_dict = render_cam_pcl(
             viz_mu, viz_fr, s, o, sph, H=H, W=W, fx=pf, bg_color=bg_color

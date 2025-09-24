@@ -117,6 +117,7 @@ def get_dynamic_curves(
     refilter_o3d_nb_neighbors=16,
     refilter_o3d_std_ratio=5.0,
     refilter_shaking_th=0.2,
+    dataset_mode="iphone",
     refilter_remove_shaking_curve=False,  # if true, any curve with shaking will be totally removed
     refilter_spatracker_consistency_th=0.2,
     #
@@ -156,7 +157,7 @@ def get_dynamic_curves(
         logging.info(f"SpaT mode, direct use 3D Track")
         # spa tracker model
         # manually homo list
-        homo_list = __int2homo_coord__(track[..., :2], s2d.H, s2d.W)
+        homo_list = __int2homo_coord__(track[..., :2], s2d.H, s2d.W, dataset_mode)
         dep_list = track[..., -1]
         node_xyz_spatracker = get_world_points(homo_list, dep_list, cams, t_list)
 
@@ -225,7 +226,7 @@ def get_dynamic_curves(
                 track = track[:, filter_mask]
                 track_mask = track_mask[:, filter_mask]
                 # * redo
-                homo_list = __int2homo_coord__(track[..., :2], s2d.H, s2d.W)
+                homo_list = __int2homo_coord__(track[..., :2], s2d.H, s2d.W, dataset_mode)
                 dep_list = track[..., -1]
                 node_xyz_spatracker = get_world_points(
                     homo_list, dep_list, cams, t_list
@@ -353,10 +354,13 @@ def curve_shaking_identification(curve_xyz, shacking_th=0.2):
     return inlier
 
 
-def __int2homo_coord__(track_uv, H, W):
+def __int2homo_coord__(track_uv, H, W, dataset_mode="iphone"):
     # the short side is [-1,1]
     H, W = float(H), float(W)
-    L = min(H, W)
+    if dataset_mode == "physgaia":
+        L = H
+    else:
+        L = min(H, W)
     homo_x = (track_uv[..., 0] + 0.5) / L * 2 - (W / L)
     homo_y = (track_uv[..., 1] + 0.5) / L * 2 - (H / L)
     homo = torch.stack([homo_x, homo_y], -1)
