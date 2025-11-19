@@ -41,7 +41,7 @@ python mosca_precompute.py \
 Run MoSca reconstruction on a preprocessed PhysGaia scene:
 
 ```bash
-python lite_moca_reconstruct_physgaia.py \
+python mosca_reconstruct_physgaia.py \
     --cfg ./profile/physgaia/physgaia_fit_simple_smoke.yaml \
     --ws /path/to/PhysGaia/simple_smoke
 ```
