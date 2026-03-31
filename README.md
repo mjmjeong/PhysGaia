@@ -1,5 +1,4 @@
 # 🌱 PhysGaia: A Physics-Aware Dataset with Multi-Body Interactions for Dynamic Novel View Synthesis (CVPR 2026)
-
 ## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | [Paper](https://cv.snu.ac.kr/research/PhysGaia/index.htm(https://arxiv.org/abs/2506.02794))
 
  
@@ -14,7 +13,7 @@
     - ground-truth 3D trajectories
 - **😀 Research friendly!!**
     - Providing codes for recent Dynamic Novel View Synthesis (DyNVS) models
-        - [Shape-of-motion](https://github.com/mjmjeong/PhysGaia/tree/SOM), [4DGS](https://github.com/mjmjeong/PhysGaia/tree/4DGS_hex), [STG](https://github.com/mjmjeong/PhysGaia/tree/spacetime), [D-3DGS](https://github.com/mjmjeong/PhysGaia/tree/deformable)
+        - [Shape-of-motion](https://github.com/mjmjeong/PhysGaia/tree/SOM), [4DGS](https://github.com/mjmjeong/PhysGaia/tree/4DGS_hex), [STG](https://github.com/mjmjeong/PhysGaia/tree/spacetime), [D-3DGS](https://github.com/mjmjeong/PhysGaia/tree/deformable), [MoSca](https://github.com/JiahuiLei/MoSca)
     - Supporting **diverse training setting**: both monocular & multiview reconstruction
 
 ## **🔥 Ideal for “Next” Research**
