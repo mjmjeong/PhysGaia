@@ -1,6 +1,6 @@
-# 🌱 PhysGaia: A Physics-Aware Dataset of Multi-Body Interactions for Dynamic Novel View Synthesis
+# 🌱 PhysGaia: A Physics-Aware Dataset with Multi-Body Interactions for Dynamic Novel View Synthesis (CVPR 2026)
 
-## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | arXiv Paper
+## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | [Paper](https://cv.snu.ac.kr/research/PhysGaia/index.htm(https://arxiv.org/abs/2506.02794))
 
  
 
@@ -58,12 +58,17 @@ Please check each branch for integrated code for recent DyNVS methods.
 ## **💳 Citation**
 
 ```bash
-TBD
+@inproceedings{kim2026physgaia,
+              title={PhysGaia:Physics-Aware Benchmark with Multi-Body Interactions for Dynamic Novel View Synthesis},
+              author={Kim, Mijeong and Seo, Seonguk and Han, Bohyung},
+              booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+              year={2026}
+            } 
 ```
 
 ## 🤝 Contributing
 
-We welcome contributions to expand the dataset (additional modality for new downstream tasks, , implementation for other models, etc.)
+We welcome contributions to expand the dataset (additional modality for new downstream tasks, implementation for other models, etc.)
 
 Reach out via opening an issue/discussion in the repo.
 
