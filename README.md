@@ -1,7 +1,8 @@
-# 🌱 PhysGaia: A Physics-Aware Dataset with Multi-Body Interactions for Dynamic Novel View Synthesis (CVPR 2026)
+# 🌱 PhysGaia: A Physics-Aware Dataset with Multi-Body Interactions for Dynamic Novel View Synthesis <br> (CVPR 2026)
+
 ## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | [Paper](https://cv.snu.ac.kr/research/PhysGaia/index.htm(https://arxiv.org/abs/2506.02794))
 
- 
+
 
 ## **⭐️ Key Highlights**
 
