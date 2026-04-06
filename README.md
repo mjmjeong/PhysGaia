@@ -1,12 +1,25 @@
-# 🌱 PhysGaia: A Physics-Aware Benchmark with Multi-Body Interactions for Dynamic Novel View Synthesis <br> (CVPR 2026)
+# 🌱 PhysGaia: A Physics-Aware Benchmark with Multi-Body Interactions for Dynamic Novel View Synthesis (CVPR 2026)
 
-## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | [Paper](https://arxiv.org/abs/2506.02794))
+<p align="left">
+  <a href="https://mjmjeong.github.io/"><strong>Mijeong Kim</strong></a><sup>*</sup> · 
+  <a href="https://gunhee1113.github.io/"><strong>Gunhee Kim</strong></a><sup>*</sup> · 
+  Jungyoon Choi · 
+  Wonjae Roh · 
+  <a href="https://cv.snu.ac.kr/index.php/bhhan/"><strong>Bohyung Han</strong></a>
+</p>
 
 
-[Mijeong Kim](https://mjmjeong.github.io/)*, [Gunhee Kim](https://gunhee1113.github.io/)\*, Jungyoon Choi, Wonjae Roh, [Bohyung Han](https://cv.snu.ac.kr/index.php/bhhan/)
-
+<p align="left">
+  <a href="https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-orange?style=for-the-badge"></a>
+  <a href="https://cv.snu.ac.kr/research/PhysGaia/index.html"><img src="https://img.shields.io/badge/🌐%20Project-Page-blue?style=for-the-badge"></a>
+  <a href="https://arxiv.org/abs/2506.02794"><img src="https://img.shields.io/badge/📄%20arXiv-Paper-red?style=for-the-badge"></a>
+</p>
 
 \* Equal Contribution
+
+## 🚀 News
+- **[2026-02]** PhysGaia has been accepted to **CVPR 2026**! 🎊
+- **[2025-05]** Project page and dataset are now available.
 
 
 ## **⭐️ Key Highlights**
