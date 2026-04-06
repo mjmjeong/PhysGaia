@@ -68,7 +68,8 @@ For the COLMAP initialization files, please check this [drive](https://drive.goo
 
 Please check each branch for integrated code for recent DyNVS methods. 
 
-- **Shape-of-motion (arXiv 24.07):** https://github.com/mjmjeong/PhysGaia/tree/SOM
+- **MoSca (CVPR 25):** https://github.com/mjmjeong/PhysGaia/tree/MoSca
+- **Shape-of-motion (ICCV 25):** https://github.com/mjmjeong/PhysGaia/tree/SOM
 - **4DGS (CVPR 24):** https://github.com/mjmjeong/PhysGaia/tree/4DGS_hex
 - **STG (CVPR 24):** https://github.com/mjmjeong/PhysGaia/tree/spacetime
 - **D-3DGS (CVPR 24):** https://github.com/mjmjeong/PhysGaia/tree/deformable
