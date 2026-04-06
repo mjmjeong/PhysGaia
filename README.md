@@ -1,6 +1,6 @@
-# 🌱 PhysGaia: A Physics-Aware Dataset with Multi-Body Interactions for Dynamic Novel View Synthesis <br> (CVPR 2026)
+# 🌱 PhysGaia: A Physics-Aware Benchmark with Multi-Body Interactions for Dynamic Novel View Synthesis <br> (CVPR 2026)
 
-## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | [Paper](https://cv.snu.ac.kr/research/PhysGaia/index.htm(https://arxiv.org/abs/2506.02794))
+## [Dataset](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main) | [Project Page](https://cv.snu.ac.kr/research/PhysGaia/index.html) | [Paper](https://arxiv.org/abs/2506.02794))
 
 
 [Mijeong Kim](https://mjmjeong.github.io/)*, [Gunhee Kim](https://gunhee1113.github.io/)\*, Jungyoon Choi, Wonjae Roh, [Bohyung Han](https://cv.snu.ac.kr/index.php/bhhan/)
@@ -65,8 +65,8 @@ Please check each branch for integrated code for recent DyNVS methods.
 ```bash
 @inproceedings{kim2026physgaia,
               title={PhysGaia:Physics-Aware Benchmark with Multi-Body Interactions for Dynamic Novel View Synthesis},
-              author={Kim, Mijeong and Seo, Seonguk and Han, Bohyung},
-              booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+              author={Kim, Mijeong and Kim, Gunhee and Choi, Jungyoon and Roh, Wonjae and Han, Bohyung},
+              booktitle={CVPR},
               year={2026}
             } 
 ```
