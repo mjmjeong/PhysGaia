@@ -44,8 +44,9 @@
 - 🧪 **Material-specific physics solver integration**
 - 🧬 **Compatibility with existing DyNVS models**
 
-## **📂 Dataset Structure**
+## **📂 Dataset Access**
 
+You can find our full dataset on [**Hugging Face**](https://huggingface.co/datasets/mijeongkim/PhysGaia/tree/main).
 Each folder is corresponding to each scene, containing the following files: 
 
 ```bash
